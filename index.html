@@ -216,17 +216,29 @@
       box-shadow: 0 -4px 20px rgba(0,0,0,.10); z-index: 99;
     }
 
-    /* 3 big person buttons */
-    .person-btns { display: flex; gap: 8px; margin-bottom: 8px; }
+    /* Person buttons */
+    .person-btns { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; }
     .person-btn {
-      flex: 1; padding: 14px 6px; border: none; border-radius: var(--radius-sm);
-      font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 700;
+      flex: 1 1 auto; min-width: 64px; padding: 12px 6px; border: none; border-radius: var(--radius-sm);
+      font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 700;
       color: #fff; cursor: pointer; transition: opacity .15s, transform .1s;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1px; line-height: 1.15;
     }
     .person-btn:active { transform: scale(.95); opacity: .85; }
-    .person-btn.p1 { background: var(--color-p1); }
-    .person-btn.p2 { background: var(--color-p2); }
-    .person-btn.cm { background: var(--color-cm); }
+    .person-btn .btn-num { font-size: 10px; font-weight: 600; opacity: .75; letter-spacing: .2px; }
+    /* Few-person layout: bigger, no number prefix */
+    .person-btns.few .person-btn { padding: 14px 6px; font-size: 15px; flex: 1; }
+
+    /* Settings person rows */
+    .settings-person-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .settings-person-num { width: 20px; text-align: center; font-size: 13px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+    .settings-person-input { flex: 1; padding: 10px 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: 'Barlow', sans-serif; font-size: 15px; outline: none; transition: border-color .15s; }
+    .settings-person-input:focus { border-color: var(--primary); }
+    .settings-remove-btn { width: 28px; height: 28px; border: none; border-radius: 50%; background: #FEE2E2; color: #B91C1C; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .settings-remove-btn:hover { background: #FECACA; }
+    .btn-add-person { display: block; width: 100%; padding: 10px; border: 2px dashed var(--border); border-radius: var(--radius-sm); background: transparent; color: var(--primary); font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; transition: border-color .15s, background .15s; }
+    .btn-add-person:hover { border-color: var(--primary); background: #EFF6FF; }
 
     /* Back + Done row */
     .nav-btns { display: flex; gap: 8px; }
@@ -257,11 +269,11 @@
       font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700;
       color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px;
     }
-    .payer-buttons { display: flex; gap: 8px; }
+    .payer-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
     .payer-btn {
-      flex: 1; padding: 12px; border: 2px solid var(--border); border-radius: var(--radius-sm);
+      flex: 1 1 auto; min-width: 80px; padding: 12px; border: 2px solid var(--border); border-radius: var(--radius-sm);
       background: var(--bg); font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 600;
-      cursor: pointer; transition: all .15s; color: var(--text);
+      cursor: pointer; transition: all .15s; color: var(--text); text-align: center;
     }
     .payer-btn.selected { color: #fff; border-color: transparent; }
 
@@ -369,15 +381,12 @@
   <div class="modal">
     <h2>⚙️ Settings</h2>
     <div class="form-group">
-      <label>Person 1 <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#1D4ED8;vertical-align:middle;margin-left:4px"></span></label>
-      <input type="text" id="setting-p1" placeholder="David">
+      <label style="margin-bottom:8px">People splitting the bill</label>
+      <div id="settings-people-list"></div>
+      <button class="btn-add-person" onclick="addSettingsPerson()">+ Add person</button>
     </div>
-    <div class="form-group">
-      <label>Person 2 <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#B91C1C;vertical-align:middle;margin-left:4px"></span></label>
-      <input type="text" id="setting-p2" placeholder="Bruno">
-    </div>
-    <div class="form-group">
-      <label>Shared label <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#047857;vertical-align:middle;margin-left:4px"></span></label>
+    <div class="form-group" style="margin-top:14px">
+      <label>Shared / Common label</label>
       <input type="text" id="setting-common" placeholder="Common">
     </div>
     <div class="modal-actions">
@@ -390,38 +399,79 @@
 <script>
 // ── Settings ──────────────────────────────────
 function loadSettings() {
-  return {
-    p1:     localStorage.getItem('p1')     || 'David',
-    p2:     localStorage.getItem('p2')     || 'Bruno',
-    common: localStorage.getItem('common') || 'Common',
-  };
+  let people;
+  try { people = JSON.parse(localStorage.getItem('people')); } catch {}
+  if (!Array.isArray(people) || people.length < 2) {
+    // Migrate from old per-key format
+    const p1 = localStorage.getItem('p1') || 'David';
+    const p2 = localStorage.getItem('p2') || 'Bruno';
+    people = [p1, p2];
+  }
+  return { people, common: localStorage.getItem('common') || 'Common' };
 }
-function getPeople()  { const s = loadSettings(); return [s.p1, s.p2]; }
+function getPeople()  { return loadSettings().people; }
 function getCommon()  { return loadSettings().common; }
-function getAllNames() { const s = loadSettings(); return [s.p1, s.p2, s.common]; }
+function getAllNames() { const s = loadSettings(); return [...s.people, s.common]; }
 
-// Fixed distinct colors by slot index
-const SLOT_COLORS = ['#1D4ED8', '#B91C1C', '#047857'];
+// 8 distinct colors for up to 8 people + common always last slot
+const SLOT_COLORS = ['#1D4ED8','#B91C1C','#047857','#7C3AED','#D97706','#0891B2','#BE185D','#374151','#047857'];
 
 function getColors() {
   const names = getAllNames();
   const out = {};
-  names.forEach((n, i) => out[n] = SLOT_COLORS[i]);
+  // common always gets the green (last slot), people get the rest in order
+  const people = getPeople();
+  people.forEach((n, i) => out[n] = SLOT_COLORS[i % (SLOT_COLORS.length - 1)]);
+  out[getCommon()] = SLOT_COLORS[SLOT_COLORS.length - 1];
   return out;
 }
 
 function openSettings() {
   const s = loadSettings();
-  document.getElementById('setting-p1').value     = s.p1;
-  document.getElementById('setting-p2').value     = s.p2;
+  renderSettingsPeople(s.people);
   document.getElementById('setting-common').value = s.common;
   document.getElementById('settings-modal').classList.add('open');
 }
+
+function renderSettingsPeople(people) {
+  document.getElementById('settings-people-list').innerHTML = people.map((p, i) => `
+    <div class="settings-person-row">
+      <span class="settings-person-num" style="color:${SLOT_COLORS[i % (SLOT_COLORS.length-1)]}">${i + 1}</span>
+      <input type="text" class="settings-person-input" value="${p}" placeholder="Name">
+      ${people.length > 2
+        ? `<button class="settings-remove-btn" onclick="removeSettingsPerson(${i})">✕</button>`
+        : '<span style="width:28px"></span>'}
+    </div>`).join('');
+}
+
+function addSettingsPerson() {
+  const current = getSettingsPeopleFromForm();
+  if (current.length >= 8) return;
+  renderSettingsPeople([...current, '']);
+  // Focus the new input
+  const inputs = document.querySelectorAll('.settings-person-input');
+  inputs[inputs.length - 1].focus();
+}
+
+function removeSettingsPerson(idx) {
+  const current = getSettingsPeopleFromForm();
+  current.splice(idx, 1);
+  renderSettingsPeople(current);
+}
+
+function getSettingsPeopleFromForm() {
+  return Array.from(document.querySelectorAll('.settings-person-input')).map(el => el.value.trim());
+}
+
 function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
+
 function saveSettings() {
-  localStorage.setItem('p1',     document.getElementById('setting-p1').value.trim()     || 'David');
-  localStorage.setItem('p2',     document.getElementById('setting-p2').value.trim()     || 'Bruno');
-  localStorage.setItem('common', document.getElementById('setting-common').value.trim() || 'Common');
+  const raw    = getSettingsPeopleFromForm();
+  const people = raw.map((n, i) => n || `Person ${i + 1}`);
+  if (people.length < 2) { alert('You need at least 2 people.'); return; }
+  const common = document.getElementById('setting-common').value.trim() || 'Common';
+  localStorage.setItem('people', JSON.stringify(people));
+  localStorage.setItem('common', common);
   closeSettings();
   if (appState.screen === 'assign') renderAssignScreen();
   if (appState.screen === 'settle') renderSettleScreen();
@@ -619,24 +669,43 @@ function renderTotalsBar() {
     if (p) totals[p] = Math.round((totals[p] + item.paid_price) * 100) / 100;
   });
   const discount = appState.receipt.discounts.reduce((s, d) => s + d.amount, 0);
+  const many = names.length > 4; // people + common
   document.getElementById('totals-bar').innerHTML =
     names.map(n => `
       <div class="totals-chip">
-        <span class="chip-label" style="color:${colors[n]}">${n}</span>
+        <span class="chip-label" style="color:${colors[n]}">${many && n.length > 4 ? n.slice(0,3) : n}</span>
         <span class="chip-value">€${totals[n].toFixed(2)}</span>
       </div>`).join('') +
     (discount !== 0 ? `<div class="totals-chip">
-        <span class="chip-label" style="color:var(--green-disc)">Discount</span>
+        <span class="chip-label" style="color:var(--green-disc)">Disc.</span>
         <span class="chip-value" style="color:var(--green-disc)">${discount.toFixed(2)}</span>
       </div>` : '');
 }
 
 function renderPersonButtons() {
-  const names   = getAllNames(); // [p1, p2, common]
-  const classes = ['p1', 'p2', 'cm'];
-  document.getElementById('person-btns').innerHTML = names.map((n, i) =>
-    `<button class="person-btn ${classes[i]}" onclick="assignSelected('${n}')">${n}</button>`
-  ).join('');
+  const people = getPeople();
+  const common = getCommon();
+  const colors = getColors();
+  const few    = people.length <= 2;
+  const allForBtn = [...people, common];
+
+  const btns = allForBtn.map((name, i) => {
+    const isCommon = i === people.length;
+    const color    = colors[name];
+    if (few) {
+      return `<button class="person-btn" style="background:${color}" onclick="assignSelected('${name.replace(/'/g,"\\'")}'">${name}</button>`;
+    } else {
+      const num  = isCommon ? '★' : (i + 1);
+      const abbr = name.length > 3 ? name.slice(0, 3) : name;
+      return `<button class="person-btn" style="background:${color}" onclick="assignSelected('${name.replace(/'/g,"\\'")}')">
+        <span class="btn-num">${num}</span>${abbr}
+      </button>`;
+    }
+  }).join('');
+
+  const container = document.getElementById('person-btns');
+  container.innerHTML = btns;
+  container.className = 'person-btns' + (few ? ' few' : '');
 }
 
 function renderItemsList() {
@@ -655,9 +724,9 @@ function renderItemsList() {
       : item.quantity > 1 ? `${item.quantity} × €${item.unit_price.toFixed(2)}` : '';
 
     const badgeHtml = person
-      ? `<div class="assignment-badge filled" style="--person-color:${colors[person]};background:${colors[person]}">${person}</div>`
+      ? `<div class="assignment-badge filled" style="--person-color:${colors[person]};background:${colors[person]}">${getPeople().length > 2 ? person.slice(0,3) : person}</div>`
       : (sugg.name && sugg.conf >= 0.5)
-        ? `<div class="assignment-badge empty">→ ${sugg.name}</div>`
+        ? `<div class="assignment-badge empty">→ ${getPeople().length > 2 ? sugg.name.slice(0,3) : sugg.name}</div>`
         : `<div class="assignment-badge empty">—</div>`;
 
     html += `
@@ -720,7 +789,7 @@ function assignSelected(person) {
 function scrollToSelected() {
   const cards = document.querySelectorAll('.item-card');
   const card  = cards[appState.selectedIdx];
-  if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 // ── Settle Screen ─────────────────────────────
