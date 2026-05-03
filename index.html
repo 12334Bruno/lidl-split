@@ -233,10 +233,12 @@
       font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 700;
       color: #fff; cursor: pointer; transition: opacity .15s, transform .1s;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 1px; line-height: 1.15; min-width: 0;
+      gap: 1px; line-height: 1.15; min-width: 0; overflow: hidden;
     }
     .person-btn:active { transform: scale(.95); opacity: .85; }
     .person-btn .btn-num { font-size: 10px; font-weight: 600; opacity: .75; letter-spacing: .2px; }
+    .person-btn .btn-name,
+    .person-btn .btn-abbr { width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* Few-person layout (≤2 people → 3 buttons): bigger padding, full name */
     .person-btns.few .person-btn { padding: 14px 6px; font-size: 15px; }
 
@@ -284,6 +286,7 @@
       padding: 12px; border: 2px solid var(--border); border-radius: var(--radius-sm);
       background: var(--bg); font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 600;
       cursor: pointer; transition: all .15s; color: var(--text); text-align: center; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .payer-btn.selected { color: #fff; border-color: transparent; }
 
@@ -480,6 +483,22 @@ function saveSettings() {
   const people = raw.map((n, i) => n || `Person ${i + 1}`);
   if (people.length < 2) { alert('You need at least 2 people.'); return; }
   const common = document.getElementById('setting-common').value.trim() || 'Common';
+
+  // Build a remapping old names → new names so in-progress assignments stay valid
+  const oldPeople = getPeople();
+  const oldCommon = getCommon();
+  const nameMap   = {};
+  oldPeople.forEach((oldName, i) => { if (people[i]) nameMap[oldName] = people[i]; });
+  nameMap[oldCommon] = common;
+
+  // Remap assigned array and payer before saving
+  if (appState.assigned) {
+    appState.assigned = appState.assigned.map(a => (a && nameMap[a]) ? nameMap[a] : a);
+  }
+  if (appState.payer && nameMap[appState.payer]) {
+    appState.payer = nameMap[appState.payer];
+  }
+
   localStorage.setItem('people', JSON.stringify(people));
   localStorage.setItem('common', common);
   closeSettings();
@@ -715,11 +734,11 @@ function renderPersonButtons() {
     const gridStyle = isFirstOfLastRow ? `grid-column-start:${lastRowStart};` : '';
 
     if (few) {
-      return `<button class="person-btn" style="background:${color};${gridStyle}" onclick="assignSelected('${name.replace(/'/g,"\\'")}'">${name}</button>`;
+      return `<button class="person-btn" style="background:${color};${gridStyle}" onclick="assignSelected('${name.replace(/'/g,"\\'")}')"><span class="btn-name">${name}</span></button>`;
     } else {
       const num  = isCommon ? '★' : (i + 1);
       const abbr = name.length > 3 ? name.slice(0, 3) : name;
-      return `<button class="person-btn" style="background:${color};${gridStyle}" onclick="assignSelected('${name.replace(/'/g,"\\'")}')"><span class="btn-num">${num}</span>${abbr}</button>`;
+      return `<button class="person-btn" style="background:${color};${gridStyle}" onclick="assignSelected('${name.replace(/'/g,"\\'")}')"><span class="btn-num">${num}</span><span class="btn-abbr">${abbr}</span></button>`;
     }
   }).join('');
 
@@ -810,7 +829,7 @@ function assignSelected(person) {
 function scrollToSelected() {
   const cards = document.querySelectorAll('.item-card');
   const card  = cards[appState.selectedIdx];
-  if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 // ── Settle Screen ─────────────────────────────
