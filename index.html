@@ -720,7 +720,7 @@ function assignSelected(person) {
 function scrollToSelected() {
   const cards = document.querySelectorAll('.item-card');
   const card  = cards[appState.selectedIdx];
-  if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 // ── Settle Screen ─────────────────────────────
