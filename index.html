@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bon Splitter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #EEE9E0;
+      --card: #FFFFFF;
+      --primary: #003D8F;
+      --primary-light: #0050AA;
+      --yellow: #FFD100;
+      --yellow-dark: #E6BC00;
+      --text: #1A1A1A;
+      --muted: #6B6560;
+      --border: #D5D0C8;
+      --red: #C0392B;
+      --green: #27AE60;
+      --shadow: 0 2px 12px rgba(0,0,0,.10);
+      --shadow-lg: 0 6px 32px rgba(0,0,0,.14);
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Barlow', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Layout ─────────────────────────────── */
+    #app { min-height: 100vh; display: flex; flex-direction: column; }
+
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    header h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+    header .subtitle {
+      font-size: 12px;
+      opacity: .7;
+      font-weight: 400;
+      letter-spacing: .3px;
+    }
+    .header-left { display: flex; flex-direction: column; gap: 1px; }
+
+    .btn-icon {
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      color: #fff;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: background .15s;
+    }
+    .btn-icon:hover { background: rgba(255,255,255,.25); }
+
+    main { flex: 1; padding: 16px; max-width: 640px; margin: 0 auto; width: 100%; }
+
+    /* ── Screens ─────────────────────────────── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── Paste Screen ────────────────────────── */
+    .paste-hero {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .paste-hero h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+    .paste-hero p { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+
+    textarea {
+      width: 100%;
+      height: 220px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.55;
+      color: var(--text);
+      background: #FAFAF8;
+      resize: vertical;
+      transition: border-color .15s;
+      outline: none;
+    }
+    textarea:focus { border-color: var(--primary); }
+
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 15px 20px;
+      border: none; border-radius: var(--radius-sm);
+      font-family: 'Barlow', sans-serif;
+      font-size: 16px; font-weight: 700;
+      cursor: pointer;
+      transition: transform .1s, box-shadow .1s, background .15s;
+    }
+    .btn:active { transform: scale(.97); }
+
+    .btn-primary {
+      background: var(--yellow);
+      color: var(--primary);
+      box-shadow: 0 3px 10px rgba(255,209,0,.4);
+      margin-top: 12px;
+    }
+    .btn-primary:hover { background: var(--yellow-dark); }
+
+    .btn-secondary {
+      background: var(--primary);
+      color: #fff;
+      margin-top: 10px;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      margin-top: 10px;
+    }
+
+    .error-box {
+      background: #FEF2F2;
+      border: 1.5px solid #FCA5A5;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: var(--red);
+      font-size: 14px;
+      margin-top: 12px;
+      display: none;
+    }
+    .error-box.visible { display: block; }
+
+    /* Steps */
+    .steps {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+    }
+    .steps h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: .5px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+    .step { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+    .step:last-child { margin-bottom: 0; }
+    .step-num {
+      width: 24px; height: 24px; min-width: 24px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+    }
+    .step p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+    /* ── Settings Modal ───────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 100%; max-width: 400px;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px; font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 16px;
+    }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+    input[type="text"] {
+      width: 100%; padding: 10px 12px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Barlow', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input[type="text"]:focus { border-color: var(--primary); }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-actions .btn { flex: 1; margin: 0; }
+
+    /* ── Assign Screen ───────────────────────── */
+    .receipt-meta {
+      background: var(--primary);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .receipt-meta .store {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px; font-weight: 700;
+    }
+    .receipt-meta .date { font-size: 13px; opacity: .75; }
+    .receipt-meta .totals { text-align: right; }
+    .receipt-meta .total-amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px; font-weight: 500;
+      color: var(--yellow);
+    }
+    .receipt-meta .total-label { font-size: 11px; opacity: .7; }
+
+    .progress-bar-wrap {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: var(--muted); margin-bottom: 8px;
+    }
+    .progress-track {
+      background: var(--bg);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      border-radius: 99px;
+      transition: width .3s ease;
+    }
+
+    /* Totals bar */
+    .totals-bar {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .totals-chip {
+      display: flex; flex-direction: column; align-items: center;
+      flex: 1; min-width: 70px;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+    }
+    .totals-chip .chip-label { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+    .totals-chip .chip-value { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 500; margin-top: 2px; }
+
+    /* Items list */
+    .items-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 80px; }
+
+    .item-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: box-shadow .15s, transform .1s;
+      border: 2px solid transparent;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .item-card:active { transform: scale(.985); }
+    .item-card.assigned { border-color: var(--assigned-color, var(--border)); }
+
+    .item-info { flex: 1; min-width: 0; }
+    .item-name {
+      font-size: 15px; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .item-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .item-price {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px; font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .assignment-badge {
+      flex-shrink: 0;
+      min-width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      color: #fff;
+      transition: background .2s;
+    }
+    .assignment-badge.empty {
+      background: var(--border);
+      color: var(--muted);
+    }
+
+    /* Floating action bar */
+    .fab-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--card);
+      border-top: 1.5px solid var(--border);
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,.10);
+      z-index: 99;
+    }
+    .fab-bar .done-btn {
+      flex: 1;
+      background: var(--yellow);
+      color: var(--primary);
+      font-size: 15px; font-weight: 700;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 13px;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      font-family: 'Barlow', sans-serif;
+    }
+    .fab-bar .done-btn:active { transform: scale(.97); }
+    .fab-bar .done-btn:hover { background: var(--yellow-dark); }
+    .fab-bar .back-btn {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 13px 16px;
+      cursor: pointer;
+      font-size: 20px;
+      transition: background .15s;
+    }
+    .fab-bar .back-btn:hover { background: var(--border); }
+
+    /* Discounts section */
+    .section-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin: 16px 0 8px;
+    }
+
+    .discount-row {
+      background: #F0FDF4;
+      border: 1.5px solid #BBF7D0;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .discount-row .d-name { font-size: 14px; color: #166534; }
+    .discount-row .d-amount { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--green); font-weight: 500; }
+
+    /* ── Settle Screen ───────────────────────── */
+    .settle-hero {
+      background: var(--primary);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .settle-hero .check { font-size: 40px; margin-bottom: 8px; }
+    .settle-hero h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 24px; font-weight: 700;
+    }
+    .settle-hero p { font-size: 14px; opacity: .75; margin-top: 4px; }
+
+    .payer-select {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .payer-select h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 17px; font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 10px;
+    }
+    .payer-buttons { display: flex; gap: 8px; }
+    .payer-btn {
+      flex: 1; padding: 12px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      font-family: 'Barlow', sans-serif;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      color: var(--text);
+    }
+    .payer-btn.selected {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .settlement-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 0;
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .settlement-header {
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .settlement-header h3 {
+      font-size: 16px; font-weight: 700;
+    }
+    .owes-amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px; font-weight: 500;
+    }
+    .settlement-items {
+      border-top: 1.5px solid var(--border);
+      padding: 10px 18px;
+    }
+    .settle-item-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 14px;
+      border-bottom: 1px solid var(--bg);
+    }
+    .settle-item-row:last-child { border-bottom: none; }
+    .settle-item-name { color: var(--text); }
+    .settle-item-price { font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+
+    .settle-subtotal {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0 4px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+    .settle-common {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+
+    .hint-text {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 80px;
+      padding: 0 16px;
+      line-height: 1.5;
+    }
+    .hint-text strong { color: var(--text); }
+
+    /* ── Misc ────────────────────────────────── */
+    .tag {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px; font-weight: 600;
+      background: #EEF2FF;
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="header-left">
+      <h1>🧾 Bon Splitter</h1>
+      <span class="subtitle" id="header-subtitle">Lidl kassabon verdelen</span>
+    </div>
+    <button class="btn-icon" onclick="openSettings()" title="Instellingen">⚙️</button>
+  </header>
+
+  <main>
+
+    <!-- ── PASTE SCREEN ── -->
+    <div id="screen-paste" class="screen active">
+      <div class="paste-hero">
+        <h2>Plak je kassabon</h2>
+        <p>Kopieer de tekst van je Lidl Plus bon en plak hem hieronder.</p>
+        <textarea id="receipt-input" placeholder="Lidl Rijswijk
+       Porseleinvlinderstraat 15
+           2288 HX  Rijswijk
+OMSCHRIJVING                         EUR
+Spaghetti HWG                       0,95 B
+..."></textarea>
+        <div id="parse-error" class="error-box"></div>
+        <button class="btn btn-primary" onclick="parseReceipt()">⚡ Bon verwerken</button>
+      </div>
+
+      <div class="steps">
+        <h3>Hoe werkt het</h3>
+        <div class="step">
+          <div class="step-num">1</div>
+          <p>Open Lidl Plus → Account → Digitale Kassabon, kies een bon en kopieer alle tekst.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <p>Plak de tekst hierboven en tik op <strong>Bon verwerken</strong>.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <p>Wijs elk artikel toe aan een persoon door erop te tikken — het wijzigt telkens.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <p>Tik op <strong>Klaar</strong> voor de eindafrekening.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ASSIGN SCREEN ── -->
+    <div id="screen-assign" class="screen">
+      <div class="receipt-meta" id="receipt-meta"></div>
+
+      <div class="progress-bar-wrap">
+        <div class="progress-label">
+          <span id="progress-text">0 van 0 toegewezen</span>
+          <span id="progress-pct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="totals-bar" id="totals-bar"></div>
+
+      <div id="items-list" class="items-list"></div>
+
+      <div class="fab-bar">
+        <button class="back-btn" onclick="goBack()">←</button>
+        <button class="done-btn" onclick="goSettle()">Klaar → Afrekenen</button>
+      </div>
+    </div>
+
+    <!-- ── SETTLE SCREEN ── -->
+    <div id="screen-settle" class="screen">
+      <div class="settle-hero">
+        <div class="check">✅</div>
+        <h2>Wie heeft betaald?</h2>
+        <p>Selecteer de persoon die de rekening heeft betaald</p>
+      </div>
+
+      <div class="payer-select">
+        <h3>Betaler</h3>
+        <div class="payer-buttons" id="payer-buttons"></div>
+      </div>
+
+      <div id="settle-content"></div>
+
+      <p class="hint-text" id="settle-hint"></p>
+
+      <div class="fab-bar">
+        <button class="back-btn" onclick="goAssign()">←</button>
+        <button class="done-btn" onclick="startOver()">🔄 Nieuwe bon</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── SETTINGS MODAL ── -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <h2>⚙️ Instellingen</h2>
+    <div class="form-group">
+      <label>Persoon 1</label>
+      <input type="text" id="setting-p1" placeholder="David">
+    </div>
+    <div class="form-group">
+      <label>Persoon 2</label>
+      <input type="text" id="setting-p2" placeholder="Bruno">
+    </div>
+    <div class="form-group">
+      <label>Gedeeld label</label>
+      <input type="text" id="setting-common" placeholder="Common">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeSettings()">Annuleren</button>
+      <button class="btn btn-secondary" onclick="saveSettings()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════
+function loadSettings() {
+  return {
+    p1: localStorage.getItem('p1') || 'David',
+    p2: localStorage.getItem('p2') || 'Bruno',
+    common: localStorage.getItem('common') || 'Common',
+  };
+}
+function getPeople() { const s = loadSettings(); return [s.p1, s.p2]; }
+function getCommon() { return loadSettings().common; }
+function getAllNames() { const s = loadSettings(); return [s.p1, s.p2, s.common]; }
+
+function openSettings() {
+  const s = loadSettings();
+  document.getElementById('setting-p1').value = s.p1;
+  document.getElementById('setting-p2').value = s.p2;
+  document.getElementById('setting-common').value = s.common;
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+function saveSettings() {
+  localStorage.setItem('p1', document.getElementById('setting-p1').value.trim() || 'David');
+  localStorage.setItem('p2', document.getElementById('setting-p2').value.trim() || 'Bruno');
+  localStorage.setItem('common', document.getElementById('setting-common').value.trim() || 'Common');
+  closeSettings();
+  if (appState.screen === 'assign') renderAssignScreen();
+  if (appState.screen === 'settle') renderSettleScreen();
+}
+
+// ═══════════════════════════════════════════════
+//  COLORS — deterministic per name
+// ═══════════════════════════════════════════════
+function deriveColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xFFFFFF;
+  const hue = (hash % 360);
+  return `hsl(${hue}, 65%, 45%)`;
+}
+function getColors() {
+  const names = getAllNames();
+  const out = {};
+  names.forEach(n => out[n] = deriveColor(n));
+  return out;
+}
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+// ═══════════════════════════════════════════════
+//  MEMORY (localStorage, mirrors memory.json)
+// ═══════════════════════════════════════════════
+const MAXAGE = 100;
+
+function loadMemory() {
+  try { return JSON.parse(localStorage.getItem('memory') || '{}'); } catch { return {}; }
+}
+function saveMemory(mem) {
+  localStorage.setItem('memory', JSON.stringify(mem));
+}
+function recordAssignment(itemName, person) {
+  const mem = loadMemory();
+  if (!mem[itemName]) mem[itemName] = {};
+  mem[itemName][person] = (mem[itemName][person] || 0) + 1;
+  const total = Object.values(mem[itemName]).reduce((a, b) => a + b, 0);
+  if (total > MAXAGE) {
+    const k = total / (MAXAGE * 0.9);
+    mem[itemName] = Object.fromEntries(
+      Object.entries(mem[itemName]).map(([p, s]) => [p, s / k]).filter(([, s]) => s >= 1)
+    );
+  }
+  saveMemory(mem);
+}
+function getSuggestion(itemName) {
+  const mem = loadMemory();
+  const bucket = mem[itemName];
+  if (!bucket || Object.keys(bucket).length === 0) return { name: null, conf: 0 };
+  const total = Object.values(bucket).reduce((a, b) => a + b, 0);
+  const best = Object.entries(bucket).sort((a, b) => b[1] - a[1])[0];
+  return { name: best[0], conf: best[1] / total };
+}
+
+// ═══════════════════════════════════════════════
+//  LIDL RECEIPT PARSER  (ported from Python)
+// ═══════════════════════════════════════════════
+const SEPARATOR_RE = /^[-¦\s]+$/;
+const ITEM_RE = /^(.*)\s+([-\d,]+)\s+([A-C])$/;
+const QTY_RE = /^(.*?)\s+(\d+)\s+x\s+([\d,]+)$/;
+const WEIGHT_RE = /^\s+([\d,]+)\s+kg\s+x\s+([\d,]+)\s+EUR/;
+const ARTICLE_RE = /^(.*?)-(\d{6,})$/;
+const DISCOUNT_KW = ['korting', 'verlaagd', 'emballage', 'statiegeld'];
+
+function pf(s) { return parseFloat(s.replace(',', '.')); }
+function isSep(line) { return SEPARATOR_RE.test(line); }
+
+function splitSections(lines) {
+  const omsch = lines.findIndex(l => l.includes('OMSCHRIJVING'));
+  if (omsch === -1) throw new Error('Kan OMSCHRIJVING header niet vinden. Is dit een Lidl kassabon?');
+
+  const aantal = lines.findIndex(l => l.trim().startsWith('Aantal'));
+  if (aantal === -1) throw new Error('Kan einde van artikelenblok niet vinden (geen "Aantal" regel?).');
+
+  let sep = null;
+  for (let j = aantal - 1; j > omsch; j--) {
+    if (isSep(lines[j])) { sep = j; break; }
+  }
+  if (sep === null) throw new Error('Kan de scheidingslijn niet vinden.');
+
+  return {
+    header: lines.slice(0, omsch),
+    itemLines: lines.slice(omsch + 1, sep),
+    footer: lines.slice(sep),
+  };
+}
+
+function parseHeader(lines) {
+  const parts = lines.map(l => l.trim()).filter(Boolean);
+  return parts[0] || '';
+}
+
+function parseDate(lines) {
+  for (const line of lines) {
+    const m = line.match(/(\d{2}-\d{2}-\d{4})/);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function parseItemLine(line) {
+  let m = line.match(ITEM_RE);
+  if (m) {
+    const nameRaw = m[1].trim();
+    const item = { type: 'item', vat_category: m[3], price: pf(m[2]) };
+
+    const q = nameRaw.match(QTY_RE);
+    if (q) {
+      item.name = q[1].trim();
+      item.quantity = parseInt(q[2]);
+      item.unit_price = pf(q[3]);
+    } else {
+      item.name = nameRaw;
+      item.quantity = 1;
+      item.unit_price = item.price;
+    }
+
+    const a = item.name.match(ARTICLE_RE);
+    if (a) item.name = a[1].trim();
+
+    return item;
+  }
+
+  m = line.match(/^(.*?)\s+([-\d,]+)\s*$/);
+  if (m) {
+    const name = m[1].trim();
+    const amount = pf(m[2]);
+    const isReturn = name.startsWith('[X]');
+    const clean = isReturn ? name.slice(3).trim() : name;
+    const isDiscountKw = DISCOUNT_KW.some(kw => clean.toLowerCase().includes(kw));
+
+    if (amount < 0 || isDiscountKw) {
+      if (amount > 0 && (clean.toLowerCase().includes('statiegeld') || clean.toLowerCase().includes('emballage'))) {
+        return { type: 'item', name: clean, quantity: 1, price: amount, unit_price: amount, vat_category: null };
+      }
+      return { type: isReturn ? 'return' : 'discount', name: clean, amount };
+    }
+  }
+
+  return null;
+}
+
+function parseItems(lines) {
+  const items = [];
+  let pending = null;
+
+  for (const line of lines) {
+    if (!line.trim() || isSep(line)) continue;
+
+    const w = line.match(WEIGHT_RE);
+    if (w) {
+      if (pending) {
+        delete pending.unit_price;
+        pending.weight_kg = pf(w[1]);
+        pending.unit_price_per_kg = pf(w[2]);
+      }
+      continue;
+    }
+
+    if (pending) items.push(pending);
+    pending = parseItemLine(line.trim());
+  }
+
+  if (pending) items.push(pending);
+  return items;
+}
+
+function parseReceipt(text) {
+  const lines = text.split('\n');
+  const { header, itemLines, footer } = splitSections(lines);
+  const allLines = parseItems(itemLines);
+
+  const items = allLines.filter(r => r.type === 'item');
+  const discounts = allLines.filter(r => r.type !== 'item');
+
+  for (const item of items) {
+    item.paid_price = item.price;
+    delete item.type;
+  }
+
+  const total_gross = Math.round(items.reduce((s, i) => s + i.price, 0) * 100) / 100;
+  const total_discount = Math.round(discounts.reduce((s, d) => s + (d.amount || 0), 0) * 100) / 100;
+  const total_net = Math.round((total_gross + total_discount) * 100) / 100;
+
+  return {
+    store: parseHeader(header),
+    date: parseDate(footer),
+    total_gross,
+    total_net,
+    discounts: discounts.map(d => ({ name: d.name, amount: d.amount })),
+    items,
+  };
+}
+
+// ═══════════════════════════════════════════════
+//  APP STATE
+// ═══════════════════════════════════════════════
+const appState = {
+  screen: 'paste',
+  receipt: null,
+  assigned: [],    // null | personName
+  payer: null,
+};
+
+// ═══════════════════════════════════════════════
+//  SCREEN NAVIGATION
+// ═══════════════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  appState.screen = name;
+  window.scrollTo(0, 0);
+}
+
+function goBack() { showScreen('paste'); }
+function goAssign() { showScreen('assign'); renderAssignScreen(); }
+function startOver() {
+  document.getElementById('receipt-input').value = '';
+  showScreen('paste');
+  document.getElementById('header-subtitle').textContent = 'Lidl kassabon verdelen';
+}
+
+// ═══════════════════════════════════════════════
+//  PARSE BUTTON
+// ═══════════════════════════════════════════════
+function parseReceipt() {
+  const text = document.getElementById('receipt-input').value.trim();
+  const errBox = document.getElementById('parse-error');
+  errBox.classList.remove('visible');
+
+  if (!text) {
+    errBox.textContent = 'Plak eerst de tekst van je kassabon.';
+    errBox.classList.add('visible');
+    return;
+  }
+
+  try {
+    appState.receipt = parseReceipt(text);
+    const items = appState.receipt.items;
+    // Pre-fill assignments with memory suggestions (if confidence ≥ 75%)
+    appState.assigned = items.map(item => {
+      const s = getSuggestion(item.name);
+      return (s.name && s.conf >= 0.75) ? s.name : null;
+    });
+    appState.payer = getPeople()[0];
+
+    const sub = [appState.receipt.store, appState.receipt.date].filter(Boolean).join(' · ');
+    document.getElementById('header-subtitle').textContent = sub || 'Kassabon laden…';
+
+    showScreen('assign');
+    renderAssignScreen();
+  } catch (e) {
+    errBox.textContent = '⚠️ ' + e.message;
+    errBox.classList.add('visible');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  ASSIGN SCREEN RENDERING
+// ═══════════════════════════════════════════════
+function renderAssignScreen() {
+  renderMeta();
+  renderProgress();
+  renderTotalsBar();
+  renderItemsList();
+}
+
+function renderMeta() {
+  const r = appState.receipt;
+  document.getElementById('receipt-meta').innerHTML = `
+    <div>
+      <div class="store">${r.store || 'Lidl'}</div>
+      <div class="date">${r.date || ''}</div>
+    </div>
+    <div class="totals">
+      <div class="total-label">Totaal betaald</div>
+      <div class="total-amount">€${r.total_net.toFixed(2)}</div>
+    </div>
+  `;
+}
+
+function renderProgress() {
+  const total = appState.assigned.length;
+  const done = appState.assigned.filter(a => a !== null).length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('progress-text').textContent = `${done} van ${total} toegewezen`;
+  document.getElementById('progress-pct').textContent = `${pct}%`;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function renderTotalsBar() {
+  const s = loadSettings();
+  const names = [s.p1, s.p2, s.common];
+  const colors = getColors();
+  const totals = {};
+  names.forEach(n => totals[n] = 0);
+
+  appState.receipt.items.forEach((item, i) => {
+    const person = appState.assigned[i];
+    if (person) totals[person] = Math.round((totals[person] + item.paid_price) * 100) / 100;
+  });
+
+  const discount = appState.receipt.discounts.reduce((s, d) => s + d.amount, 0);
+
+  document.getElementById('totals-bar').innerHTML = names.map(n => `
+    <div class="totals-chip">
+      <span class="chip-label" style="color:${colors[n]}">${n}</span>
+      <span class="chip-value">€${totals[n].toFixed(2)}</span>
+    </div>
+  `).join('') + (discount !== 0 ? `
+    <div class="totals-chip">
+      <span class="chip-label" style="color:var(--green)">Korting</span>
+      <span class="chip-value" style="color:var(--green)">${discount.toFixed(2)}</span>
+    </div>
+  ` : '');
+}
+
+function renderItemsList() {
+  const colors = getColors();
+  const names = getAllNames();
+  const r = appState.receipt;
+  let html = '';
+
+  r.items.forEach((item, i) => {
+    const person = appState.assigned[i];
+    const sugg = getSuggestion(item.name);
+
+    const wt = item.weight_kg;
+    const detail = wt
+      ? `${wt.toFixed(3)} kg × €${item.unit_price_per_kg?.toFixed(2)}/kg`
+      : item.quantity > 1
+        ? `${item.quantity} × €${item.unit_price.toFixed(2)}`
+        : '';
+
+    const color = person ? colors[person] : '#C4BEB8';
+    const badgeText = person ? initials(person) : '?';
+
+    html += `
+      <div class="item-card ${person ? 'assigned' : ''}"
+           style="--assigned-color: ${color}55"
+           onclick="cycleAssignment(${i})">
+        <div class="assignment-badge ${person ? '' : 'empty'}" style="background:${color}">
+          ${badgeText}
+        </div>
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          ${detail ? `<div class="item-detail">${detail}</div>` : ''}
+          ${!person && sugg.name ? `<div class="item-detail">💡 Suggestie: ${sugg.name} (${Math.round(sugg.conf * 100)}%)</div>` : ''}
+        </div>
+        <div class="item-price">€${item.paid_price.toFixed(2)}</div>
+      </div>
+    `;
+  });
+
+  if (r.discounts.length > 0) {
+    html += `<div class="section-title">Kortingen &amp; retouren</div>`;
+    r.discounts.forEach(d => {
+      html += `
+        <div class="discount-row">
+          <span class="d-name">${d.name}</span>
+          <span class="d-amount">€${d.amount.toFixed(2)}</span>
+        </div>
+      `;
+    });
+  }
+
+  document.getElementById('items-list').innerHTML = html;
+}
+
+function cycleAssignment(idx) {
+  const names = getAllNames(); // [p1, p2, common]
+  const cur = appState.assigned[idx];
+  let next;
+  if (cur === null) {
+    next = names[0];
+  } else {
+    const i = names.indexOf(cur);
+    next = i < names.length - 1 ? names[i + 1] : null;
+  }
+
+  appState.assigned[idx] = next;
+  if (next) recordAssignment(appState.receipt.items[idx].name, next);
+
+  renderProgress();
+  renderTotalsBar();
+
+  // Update just this card for performance
+  const cards = document.querySelectorAll('.item-card');
+  const colors = getColors();
+  const card = cards[idx];
+  if (!card) { renderItemsList(); return; }
+
+  const person = next;
+  const color = person ? colors[person] : '#C4BEB8';
+  const badge = card.querySelector('.assignment-badge');
+  badge.textContent = person ? initials(person) : '?';
+  badge.style.background = color;
+  badge.className = `assignment-badge ${person ? '' : 'empty'}`;
+  card.classList.toggle('assigned', !!person);
+  card.style.setProperty('--assigned-color', color + '55');
+
+  // Clear suggestion hint if assigned
+  const detail = card.querySelectorAll('.item-detail');
+  detail.forEach(d => { if (d.textContent.startsWith('💡')) d.remove(); });
+}
+
+// ═══════════════════════════════════════════════
+//  GO TO SETTLE
+// ═══════════════════════════════════════════════
+function goSettle() {
+  const common = getCommon();
+  // Auto-assign unassigned items to common
+  appState.assigned = appState.assigned.map(a => a === null ? common : a);
+  if (!appState.payer) appState.payer = getPeople()[0];
+  showScreen('settle');
+  renderSettleScreen();
+}
+
+// ═══════════════════════════════════════════════
+//  SETTLE SCREEN
+// ═══════════════════════════════════════════════
+function renderSettleScreen() {
+  renderPayerButtons();
+  renderSettlement();
+}
+
+function renderPayerButtons() {
+  const people = getPeople();
+  const colors = getColors();
+  const html = people.map(p => `
+    <button class="payer-btn ${appState.payer === p ? 'selected' : ''}"
+            style="${appState.payer === p ? `background:${colors[p]};border-color:${colors[p]}` : ''}"
+            onclick="selectPayer('${p}')">
+      ${p}
+    </button>
+  `).join('');
+  document.getElementById('payer-buttons').innerHTML = html;
+}
+
+function selectPayer(name) {
+  appState.payer = name;
+  renderSettleScreen();
+}
+
+function renderSettlement() {
+  const r = appState.receipt;
+  const people = getPeople();
+  const common = getCommon();
+  const allNames = getAllNames();
+  const colors = getColors();
+  const payer = appState.payer;
+
+  // Build totals per person
+  const totals = {};
+  const personItems = {};
+  allNames.forEach(n => { totals[n] = 0; personItems[n] = []; });
+
+  r.items.forEach((item, i) => {
+    const p = appState.assigned[i] || common;
+    totals[p] = Math.round((totals[p] + item.paid_price) * 100) / 100;
+    personItems[p].push({ name: item.name, price: item.paid_price });
+  });
+
+  const discount = r.discounts.reduce((s, d) => s + d.amount, 0);
+  if (discount !== 0) {
+    totals[common] = Math.round((totals[common] + discount) * 100) / 100;
+    personItems[common].push({ name: 'Totale korting', price: discount });
+  }
+
+  const n = people.length;
+  const perHead = Math.round(totals[common] / n * 100) / 100;
+  const shares = {};
+  people.forEach((p, i) => {
+    shares[p] = i === 0
+      ? Math.round((totals[common] - perHead * (n - 1)) * 100) / 100
+      : perHead;
+  });
+
+  const nonPayers = people.filter(p => p !== payer);
+  let html = '';
+
+  nonPayers.forEach(person => {
+    const owes = Math.round((totals[person] + shares[person]) * 100) / 100;
+    const color = colors[person];
+    const ownItems = personItems[person];
+    const commonItems = personItems[common];
+
+    html += `
+      <div class="settlement-card">
+        <div class="settlement-header" style="background:${color}18">
+          <h3 style="color:${color}">${person} betaalt aan ${payer}</h3>
+          <span class="owes-amount" style="color:${color}">€${owes.toFixed(2)}</span>
+        </div>
+        <div class="settlement-items">
+          ${ownItems.map(it => `
+            <div class="settle-item-row">
+              <span class="settle-item-name">${it.name}</span>
+              <span class="settle-item-price">€${it.price.toFixed(2)}</span>
+            </div>
+          `).join('')}
+          ${ownItems.length > 0 ? `
+            <div class="settle-subtotal">
+              <span>Subtotaal eigen</span>
+              <span>€${totals[person].toFixed(2)}</span>
+            </div>
+          ` : ''}
+          ${shares[person] !== 0 ? `
+            <div class="settle-common">
+              <span>Aandeel gemeenschappelijk (${n} pers.)</span>
+              <span>€${shares[person].toFixed(2)}</span>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  // Common items breakdown
+  if (personItems[common].length > 0) {
+    html += `
+      <div class="section-title">Gemeenschappelijke artikelen</div>
+      <div class="settlement-card">
+        <div class="settlement-items">
+          ${personItems[common].map(it => `
+            <div class="settle-item-row">
+              <span class="settle-item-name">${it.name}</span>
+              <span class="settle-item-price">€${it.price.toFixed(2)}</span>
+            </div>
+          `).join('')}
+          <div class="settle-subtotal">
+            <span>Totaal gedeeld</span>
+            <span>€${totals[common].toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById('settle-content').innerHTML = html;
+
+  // Summary hint
+  const summary = nonPayers.map(p => {
+    const owes = Math.round((totals[p] + shares[p]) * 100) / 100;
+    return `<strong>${p}</strong> betaalt €${owes.toFixed(2)} aan <strong>${payer}</strong>`;
+  }).join(' · ');
+  document.getElementById('settle-hint').innerHTML = summary;
+}
+
+// Close modal on overlay click
+document.getElementById('settings-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+</script>
+</body>
+</html>
