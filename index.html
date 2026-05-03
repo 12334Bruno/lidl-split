@@ -844,7 +844,7 @@ function parseItems(lines) {
   return items;
 }
 
-function parseReceipt(text) {
+function parseLidlText(text) {
   const lines = text.split('\n');
   const { header, itemLines, footer } = splitSections(lines);
   const allLines = parseItems(itemLines);
@@ -914,7 +914,7 @@ function parseReceipt() {
   }
 
   try {
-    appState.receipt = parseReceipt(text);
+    appState.receipt = parseLidlText(text);
     const items = appState.receipt.items;
     // Pre-fill assignments with memory suggestions (if confidence ≥ 75%)
     appState.assigned = items.map(item => {
