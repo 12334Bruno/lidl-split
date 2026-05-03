@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { round2, splitEqually, computeRunningTotals, computeSettlement } from './money.js';
+import { round2, splitEqually, computeRunningTotals, computeSettlement } from './../src/money.js';
 
 describe('round2', () => {
   test('handles exact values', () => {

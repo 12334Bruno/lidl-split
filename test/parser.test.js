@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseLidlText, parseItemLine } from './parser.js';
+import { parseLidlText, parseItemLine } from './../src/parser.js';
 
 const LIDL_DUMP = readFileSync('./fixtures/2026-03-16-lidl-dump.txt', 'utf8');
 
