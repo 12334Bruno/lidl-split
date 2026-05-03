@@ -202,38 +202,59 @@ function renderTotalsBar() {
       </div>` : '');
 }
 
+// ── Grid renderer (shared by person buttons and payer buttons) ────────────────
+// items: [{ name, callback, color?, number?, selected?, btnClass? }]
+// - number: shown as small label above abbreviation; omit for full-name layout
+// - selected: when present (even false), color is only applied on selected=true (payer-btn style)
+//             when absent, color is always applied as background (person-btn style)
+function renderGrid(container, items, maxCols = 4) {
+  const n = items.length;
+  const cols = Math.min(n, maxCols);
+  const rem = n > cols ? n % cols : 0;
+  const lastRowStart = rem > 0 ? Math.floor((cols - rem) / 2) + 1 : null;
+
+  container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  container.replaceChildren(...items.map((item, i) => {
+    const { name, color, number, selected, btnClass = 'person-btn' } = item;
+    const isSelectable = 'selected' in item;
+    const btn = document.createElement('button');
+
+    btn.className = [btnClass, isSelectable && selected ? 'selected' : ''].filter(Boolean).join(' ');
+    if (lastRowStart !== null && i === n - rem) btn.style.gridColumnStart = lastRowStart;
+    if (color) {
+      if (!isSelectable) {
+        btn.style.background = color;
+      } else if (selected) {
+        btn.style.background = color;
+        btn.style.borderColor = color;
+      }
+    }
+
+    const abbr = name.length > 3 ? name.slice(0, 3) : name;
+    btn.innerHTML = number != null
+      ? `<span class="btn-num">${number}</span><span class="btn-abbr">${abbr}</span>`
+      : `<span class="btn-name">${name}</span>`;
+
+    btn.onclick = item.callback;
+    return btn;
+  }));
+}
+
 function renderPersonButtons() {
   const people = getPeople();
   const common = getCommon();
   const colors = getColors();
   const few    = people.length <= 2;
-  const allForBtn = [...people, common];
-  const total  = allForBtn.length;
-
-  const maxCols = 4;
-  const cols    = Math.min(total, maxCols);
-  const remainder    = total > cols ? total % cols : 0;
-  const lastRowStart = remainder > 0 ? Math.floor((cols - remainder) / 2) + 1 : null;
-
-  const btns = allForBtn.map((name, i) => {
-    const isCommon = i === people.length;
-    const color    = colors[name];
-    const isFirstOfLastRow = lastRowStart !== null && i === total - remainder;
-    const gridStyle = isFirstOfLastRow ? `grid-column-start:${lastRowStart};` : '';
-
-    if (few) {
-      return `<button class="person-btn" style="background:${color};${gridStyle}" onclick="assignSelected('${name.replace(/'/g,"\\'")}')"><span class="btn-name">${name}</span></button>`;
-    } else {
-      const num  = isCommon ? '★' : (i + 1);
-      const abbr = name.length > 3 ? name.slice(0, 3) : name;
-      return `<button class="person-btn" style="background:${color};${gridStyle}" onclick="assignSelected('${name.replace(/'/g,"\\'")}')"><span class="btn-num">${num}</span><span class="btn-abbr">${abbr}</span></button>`;
-    }
-  }).join('');
+  const all    = [...people, common];
 
   const container = document.getElementById('person-btns');
-  container.innerHTML = btns;
   container.className = 'person-btns' + (few ? ' few' : '');
-  container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  renderGrid(container, all.map((name, i) => ({
+    name,
+    color: colors[name],
+    number: few ? null : (i === people.length ? '★' : i + 1),
+    callback: () => assignSelected(name),
+  })));
 }
 
 function renderItemsList() {
@@ -329,25 +350,14 @@ function goSettle() {
 function renderSettleScreen() { renderPayerButtons(); renderSettlement(); }
 
 function renderPayerButtons() {
-  const people  = getPeople();
-  const total   = people.length;
-  const maxCols = 3;
-  const cols    = Math.min(total, maxCols);
-  const remainder    = total > cols ? total % cols : 0;
-  const lastRowStart = remainder > 0 ? Math.floor((cols - remainder) / 2) + 1 : null;
-
-  const html = people.map((p, i) => {
-    const isFirstOfLastRow = lastRowStart !== null && i === total - remainder;
-    const gridStyle = isFirstOfLastRow ? `grid-column-start:${lastRowStart};` : '';
-    const sel = appState.payer === p;
-    return `<button class="payer-btn ${sel ? 'selected' : ''}"
-      style="${sel ? `background:${SLOT_COLORS[i]};border-color:${SLOT_COLORS[i]};` : ''}${gridStyle}"
-      onclick="selectPayer('${p}')">${p}</button>`;
-  }).join('');
-
-  const container = document.getElementById('payer-buttons');
-  container.innerHTML = html;
-  container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  const people = getPeople();
+  renderGrid(document.getElementById('payer-buttons'), people.map((name, i) => ({
+    name,
+    color: SLOT_COLORS[i],
+    selected: appState.payer === name,
+    callback: () => selectPayer(name),
+    btnClass: 'payer-btn',
+  })), 3);
 }
 
 function selectPayer(name) { appState.payer = name; renderSettleScreen(); }
