@@ -204,23 +204,18 @@ function renderTotalsBar() {
 
 // ── Grid renderer (shared by person buttons and payer buttons) ────────────────
 // items: [{ name, callback, color?, number?, selected?, btnClass? }]
-// - number: shown as small label above abbreviation; omit for full-name layout
-// - selected: when present (even false), color is only applied on selected=true (payer-btn style)
-//             when absent, color is always applied as background (person-btn style)
+// number: small label above abbreviation; omit for full-name layout
+// selected: if key is present, color only applied when true (payer style); if absent, always applied (person style)
 function renderGrid(container, items, maxCols = 4) {
-  const n = items.length;
-  const cols = Math.min(n, maxCols);
-  const rem = n > cols ? n % cols : 0;
-  const lastRowStart = rem > 0 ? Math.floor((cols - rem) / 2) + 1 : null;
+  const cols = Math.min(items.length, maxCols);
 
   container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  container.replaceChildren(...items.map((item, i) => {
+  container.replaceChildren(...items.map((item) => {
     const { name, color, number, selected, btnClass = 'person-btn' } = item;
     const isSelectable = 'selected' in item;
     const btn = document.createElement('button');
 
     btn.className = [btnClass, isSelectable && selected ? 'selected' : ''].filter(Boolean).join(' ');
-    if (lastRowStart !== null && i === n - rem) btn.style.gridColumnStart = lastRowStart;
     if (color) {
       if (!isSelectable) {
         btn.style.background = color;
