@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Receipt Splitter</title>
+  <title>Lidl-Split</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
   <style>
     :root {
       --bg: #EEE9E0;
@@ -51,6 +52,15 @@
       cursor: pointer; font-size: 18px; transition: background .15s;
     }
     .btn-icon:hover { background: rgba(255,255,255,.25); }
+
+    /* Inline SVG icons */
+    svg.lucide { display: inline-block; vertical-align: middle; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    h1 svg.lucide { width: 22px; height: 22px; }
+    .btn-icon svg.lucide { width: 18px; height: 18px; }
+    .btn svg.lucide { width: 18px; height: 18px; }
+    .nav-btn svg.lucide { width: 16px; height: 16px; vertical-align: -2px; }
+    .settle-hero svg.lucide { width: 48px; height: 48px; stroke: #fff; stroke-width: 1.5; display: block; margin: 0 auto 12px; }
+    .modal h2 svg.lucide { width: 20px; height: 20px; vertical-align: -3px; }
 
     main { flex: 1; padding: 16px; max-width: 640px; margin: 0 auto; width: 100%; }
 
@@ -216,19 +226,19 @@
       box-shadow: 0 -4px 20px rgba(0,0,0,.10); z-index: 99;
     }
 
-    /* Person buttons */
-    .person-btns { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; }
+    /* Person buttons — grid-template-columns is set dynamically by JS */
+    .person-btns { display: grid; gap: 7px; margin-bottom: 8px; }
     .person-btn {
-      flex: 1 1 auto; min-width: 64px; padding: 12px 6px; border: none; border-radius: var(--radius-sm);
+      padding: 12px 6px; border: none; border-radius: var(--radius-sm);
       font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 700;
       color: #fff; cursor: pointer; transition: opacity .15s, transform .1s;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 1px; line-height: 1.15;
+      gap: 1px; line-height: 1.15; min-width: 0;
     }
     .person-btn:active { transform: scale(.95); opacity: .85; }
     .person-btn .btn-num { font-size: 10px; font-weight: 600; opacity: .75; letter-spacing: .2px; }
-    /* Few-person layout: bigger, no number prefix */
-    .person-btns.few .person-btn { padding: 14px 6px; font-size: 15px; flex: 1; }
+    /* Few-person layout (≤2 people → 3 buttons): bigger padding, full name */
+    .person-btns.few .person-btn { padding: 14px 6px; font-size: 15px; }
 
     /* Settings person rows */
     .settings-person-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -260,7 +270,6 @@
       background: var(--primary); color: #fff; border-radius: var(--radius);
       padding: 20px; margin-bottom: 14px; text-align: center;
     }
-    .settle-hero .check { font-size: 40px; margin-bottom: 8px; }
     .settle-hero h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; }
     .settle-hero p { font-size: 14px; opacity: .75; margin-top: 4px; }
 
@@ -269,11 +278,12 @@
       font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700;
       color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px;
     }
-    .payer-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    /* payer-buttons — grid-template-columns set dynamically by JS */
+    .payer-buttons { display: grid; gap: 8px; }
     .payer-btn {
-      flex: 1 1 auto; min-width: 80px; padding: 12px; border: 2px solid var(--border); border-radius: var(--radius-sm);
+      padding: 12px; border: 2px solid var(--border); border-radius: var(--radius-sm);
       background: var(--bg); font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 600;
-      cursor: pointer; transition: all .15s; color: var(--text); text-align: center;
+      cursor: pointer; transition: all .15s; color: var(--text); text-align: center; min-width: 0;
     }
     .payer-btn.selected { color: #fff; border-color: transparent; }
 
@@ -306,10 +316,10 @@
 
   <header>
     <div class="header-left">
-      <h1>🧾 Receipt Splitter</h1>
+      <h1><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="lucide"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M16 8H8"/><path d="M16 12H8"/><path d="M12 16H8"/></svg> Lidl-Split</h1>
       <span class="subtitle" id="header-subtitle">Split your Lidl receipt</span>
     </div>
-    <button class="btn-icon" onclick="openSettings()" title="Settings">⚙️</button>
+    <button class="btn-icon" onclick="openSettings()" title="Settings"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="lucide"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </header>
 
   <main>
@@ -321,14 +331,14 @@
         <p>Copy the text from your Lidl Plus receipt and paste it below.</p>
         <textarea id="receipt-input" placeholder="Lidl Rijswijk&#10;       Porseleinvlinderstraat 15&#10;OMSCHRIJVING                         EUR&#10;Spaghetti HWG                       0,95 B&#10;..."></textarea>
         <div id="parse-error" class="error-box"></div>
-        <button class="btn btn-primary" onclick="handleParse()">⚡ Parse Receipt</button>
+        <button class="btn btn-primary" onclick="handleParse()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="lucide"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="12" y2="12"/></svg> Parse Receipt</button>
       </div>
       <div class="steps">
         <h3>How it works</h3>
         <div class="step"><div class="step-num">1</div><p>Open Lidl Plus → Account → Digital Receipt, pick a receipt and copy all the text.</p></div>
         <div class="step"><div class="step-num">2</div><p>Paste the text above and tap <strong>Parse Receipt</strong>.</p></div>
         <div class="step"><div class="step-num">3</div><p>Tap an item to select it (highlighted in blue), then tap a person button at the bottom. Selection moves to the next unassigned item automatically.</p></div>
-        <div class="step"><div class="step-num">4</div><p>Tap <strong>Done → Settle</strong> to see who owes what.</p></div>
+        <div class="step"><div class="step-num">4</div><p>Tap <strong>Done</strong> to see who owes what.</p></div>
       </div>
     </div>
 
@@ -348,8 +358,8 @@
       <div class="fab-bar">
         <div class="person-btns" id="person-btns"></div>
         <div class="nav-btns">
-          <button class="nav-btn" onclick="goBack()">← Back</button>
-          <button class="nav-btn done" onclick="goSettle()">Done → Settle</button>
+          <button class="nav-btn" onclick="goBack()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="lucide"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg> Back</button>
+          <button class="nav-btn done" onclick="goSettle()">Done <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="lucide"><path d="M20 6 9 17l-5-5"/></svg></button>
         </div>
       </div>
     </div>
@@ -357,7 +367,7 @@
     <!-- SETTLE -->
     <div id="screen-settle" class="screen">
       <div class="settle-hero">
-        <div class="check">✅</div>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="lucide"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
         <h2>Who paid the bill?</h2>
         <p>Select the person who paid at the register</p>
       </div>
@@ -368,8 +378,8 @@
       <div id="settle-content"></div>
       <p class="hint-text" id="settle-hint"></p>
       <div class="settle-fab">
-        <button class="nav-btn" onclick="goAssign()">← Back</button>
-        <button class="nav-btn done" onclick="startOver()">🔄 New Receipt</button>
+        <button class="nav-btn" onclick="goAssign()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="lucide"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg> Back</button>
+        <button class="nav-btn done" onclick="startOver()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="lucide"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> New Receipt</button>
       </div>
     </div>
 
@@ -379,7 +389,7 @@
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay" id="settings-modal">
   <div class="modal">
-    <h2>⚙️ Settings</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="lucide"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> Settings</h2>
     <div class="form-group">
       <label style="margin-bottom:8px">People splitting the bill</label>
       <div id="settings-people-list"></div>
@@ -688,24 +698,35 @@ function renderPersonButtons() {
   const colors = getColors();
   const few    = people.length <= 2;
   const allForBtn = [...people, common];
+  const total  = allForBtn.length;
+
+  // Max 5 per row; if total ≤ 5, use total columns (all on one row)
+  const maxCols = 5;
+  const cols    = Math.min(total, maxCols);
+
+  // Centre the last partial row with a grid-column-start offset
+  const remainder = total > cols ? total % cols : 0;
+  const lastRowStart = remainder > 0 ? Math.floor((cols - remainder) / 2) + 1 : null;
 
   const btns = allForBtn.map((name, i) => {
     const isCommon = i === people.length;
     const color    = colors[name];
+    const isFirstOfLastRow = lastRowStart !== null && i === total - remainder;
+    const gridStyle = isFirstOfLastRow ? `grid-column-start:${lastRowStart};` : '';
+
     if (few) {
-      return `<button class="person-btn" style="background:${color}" onclick="assignSelected('${name.replace(/'/g,"\\'")}'">${name}</button>`;
+      return `<button class="person-btn" style="background:${color};${gridStyle}" onclick="assignSelected('${name.replace(/'/g,"\\'")}'">${name}</button>`;
     } else {
       const num  = isCommon ? '★' : (i + 1);
       const abbr = name.length > 3 ? name.slice(0, 3) : name;
-      return `<button class="person-btn" style="background:${color}" onclick="assignSelected('${name.replace(/'/g,"\\'")}')">
-        <span class="btn-num">${num}</span>${abbr}
-      </button>`;
+      return `<button class="person-btn" style="background:${color};${gridStyle}" onclick="assignSelected('${name.replace(/'/g,"\\'")}')"><span class="btn-num">${num}</span>${abbr}</button>`;
     }
   }).join('');
 
   const container = document.getElementById('person-btns');
   container.innerHTML = btns;
   container.className = 'person-btns' + (few ? ' few' : '');
+  container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 }
 
 function renderItemsList() {
@@ -804,12 +825,25 @@ function goSettle() {
 function renderSettleScreen() { renderPayerButtons(); renderSettlement(); }
 
 function renderPayerButtons() {
-  const people = getPeople();
-  document.getElementById('payer-buttons').innerHTML = people.map((p, i) =>
-    `<button class="payer-btn ${appState.payer === p ? 'selected' : ''}"
-             style="${appState.payer === p ? `background:${SLOT_COLORS[i]};border-color:${SLOT_COLORS[i]}` : ''}"
-             onclick="selectPayer('${p}')">${p}</button>`
-  ).join('');
+  const people  = getPeople();
+  const total   = people.length;
+  const maxCols = 5;
+  const cols    = Math.min(total, maxCols);
+  const remainder    = total > cols ? total % cols : 0;
+  const lastRowStart = remainder > 0 ? Math.floor((cols - remainder) / 2) + 1 : null;
+
+  const html = people.map((p, i) => {
+    const isFirstOfLastRow = lastRowStart !== null && i === total - remainder;
+    const gridStyle = isFirstOfLastRow ? `grid-column-start:${lastRowStart};` : '';
+    const sel = appState.payer === p;
+    return `<button class="payer-btn ${sel ? 'selected' : ''}"
+      style="${sel ? `background:${SLOT_COLORS[i]};border-color:${SLOT_COLORS[i]};` : ''}${gridStyle}"
+      onclick="selectPayer('${p}')">${p}</button>`;
+  }).join('');
+
+  const container = document.getElementById('payer-buttons');
+  container.innerHTML = html;
+  container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 }
 function selectPayer(name) { appState.payer = name; renderSettleScreen(); }
 
