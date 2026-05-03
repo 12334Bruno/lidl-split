@@ -210,7 +210,7 @@ function renderPersonButtons() {
   const allForBtn = [...people, common];
   const total  = allForBtn.length;
 
-  const maxCols = 5;
+  const maxCols = 4;
   const cols    = Math.min(total, maxCols);
   const remainder    = total > cols ? total % cols : 0;
   const lastRowStart = remainder > 0 ? Math.floor((cols - remainder) / 2) + 1 : null;
@@ -331,7 +331,7 @@ function renderSettleScreen() { renderPayerButtons(); renderSettlement(); }
 function renderPayerButtons() {
   const people  = getPeople();
   const total   = people.length;
-  const maxCols = 5;
+  const maxCols = 3;
   const cols    = Math.min(total, maxCols);
   const remainder    = total > cols ? total % cols : 0;
   const lastRowStart = remainder > 0 ? Math.floor((cols - remainder) / 2) + 1 : null;
