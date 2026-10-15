@@ -1,5 +1,5 @@
 import { parseLidlText } from './parser.js';
-import { enhanceSliderHaptics } from './haptics.js?v=slider-feedback-1';
+import { enhanceSliderHaptics } from './haptics.js?v=slider-feedback-2';
 import {
   round2, computeRunningTotals, computeSettlement, equalPercentages,
   isValidPercentages, normalizePercentages, previewPercentageAmounts,
@@ -417,11 +417,13 @@ function renderSplitControls(idx) {
             oninput="updateItemPercentage(${idx}, ${personIdx}, this)">
           <span aria-hidden="true">%</span>
         </div>
-        <input class="percentage-slider" type="range" min="0" max="100" step="1"
-          value="${sliderValue}"
-          aria-label="${name} percentage slider" aria-describedby="split-status-${idx}"
-          style="--slider-color:${colors[person]};--slider-progress:${sliderValue}%" data-percentage-input="${personIdx}"
-          oninput="updateItemPercentage(${idx}, ${personIdx}, this)">
+        <div class="percentage-slider-wrap">
+          <input class="percentage-slider" type="range" min="0" max="100" step="1"
+            value="${sliderValue}"
+            aria-label="${name} percentage slider" aria-describedby="split-status-${idx}"
+            style="--slider-color:${colors[person]};--slider-progress:${sliderValue}%" data-percentage-input="${personIdx}"
+            oninput="updateItemPercentage(${idx}, ${personIdx}, this)">
+        </div>
       </div>`;
   }).join('');
   return `

@@ -1,16 +1,27 @@
+import { enhanceIOSSliderHaptics } from './ios-slider-haptics.js?v=slider-feedback-2';
+
 export function enhanceSliderHaptics(container) {
   const document = container.ownerDocument;
   const window = document.defaultView;
   const navigator = window.navigator;
-  if (typeof navigator.vibrate !== 'function') return;
-
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  if (typeof navigator.vibrate !== 'function') {
+    enhanceIOSSliderHaptics(container, reducedMotion);
+    return;
+  }
   let drag = null;
   let lastPulse = -Infinity;
 
+  const canPulse = () => document.visibilityState === 'visible' && !reducedMotion?.matches;
+  const pulse = () => {
+    lastPulse = window.performance.now();
+    // A slightly longer tick is easier to feel on Android phones.
+    try { return navigator.vibrate(20) !== false; } catch { return false; }
+  };
+
   container.addEventListener('pointerdown', event => {
-    if (!event.isPrimary || event.button !== 0 || !event.target.matches?.('.percentage-slider')) return;
-    drag = { slider: event.target, pointerId: event.pointerId, value: event.target.valueAsNumber };
+    if (drag || !event.isPrimary || event.button !== 0 || !event.target.matches?.('.percentage-slider')) return;
+    drag = { slider: event.target, pointerId: event.pointerId, value: event.target.valueAsNumber, retry: false };
     lastPulse = -Infinity;
   }, { passive: true });
 
@@ -19,17 +30,18 @@ export function enhanceSliderHaptics(container) {
     const value = drag.slider.valueAsNumber;
     if (!Number.isFinite(value) || value === drag.value) return;
     drag.value = value;
-    if (document.visibilityState !== 'visible' || reducedMotion?.matches) return;
+    if (!canPulse()) return;
 
     const now = window.performance.now();
     // Space out tiny ticks so a fast drag does not become a continuous buzz.
-    if (now - lastPulse < 50) return;
-    lastPulse = now;
-    try { navigator.vibrate(8); } catch { /* Keep dragging if vibration is blocked. */ }
+    if (now - lastPulse < 80) return;
+    drag.retry = !pulse();
   }, { passive: true });
 
   const endDrag = event => {
     if (event.pointerId != null && event.pointerId !== drag?.pointerId) return;
+    // Some touch browsers only grant vibration when the finger is lifted.
+    if (event.type === 'pointerup' && drag?.retry && drag.slider.isConnected && canPulse()) pulse();
     drag = null;
   };
   document.addEventListener('pointerup', endDrag, { capture: true, passive: true });

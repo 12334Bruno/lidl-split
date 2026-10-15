@@ -601,6 +601,11 @@ input[type="text"]:focus {
   color: var(--text);
   outline: none;
 }
+.percentage-slider-wrap {
+  position: relative;
+  min-width: 0;
+  height: 40px;
+}
 .percentage-slider {
   appearance: none;
   -webkit-appearance: none;
@@ -609,6 +614,40 @@ input[type="text"]:focus {
   height: 40px;
   background: transparent;
   cursor: pointer;
+  margin: 0;
+}
+.ios-slider-haptic-pad {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ios-slider-haptic-clip {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 32px;
+  transform: translateY(-50%);
+  overflow: hidden;
+  opacity: 0;
+}
+.ios-slider-haptic-switch {
+  all: revert;
+  margin: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  touch-action: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ios-slider-haptic-pad {
+    display: none;
+  }
 }
 .percentage-slider::-webkit-slider-runnable-track {
   height: 6px;
