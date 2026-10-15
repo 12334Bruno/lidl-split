@@ -1,5 +1,8 @@
 import { parseLidlText } from './parser.js';
-import { round2, computeRunningTotals, computeSettlement, equalPercentages, isValidPercentages, splitByPercentages } from './money.js?v=percentage-splits-2';
+import {
+  round2, computeRunningTotals, computeSettlement, equalPercentages,
+  isValidPercentages, normalizePercentages, previewPercentageAmounts,
+} from './money.js?v=percentage-splits-3';
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -350,6 +353,11 @@ function renderItemsList() {
         ? `<div class="assignment-badge empty">→ ${escapeHtml(getPeople().length > 2 ? sugg.name.slice(0,3) : sugg.name)}</div>`
         : `<div class="assignment-badge empty">—</div>`;
 
+    const splitButtonHtml = `<button type="button" class="split-menu-button ${split.enabled ? 'active' : ''}"
+      aria-expanded="${split.enabled}" aria-controls="split-controls-${i}"
+      aria-pressed="${split.enabled}" aria-label="${split.enabled ? 'Close' : 'Open'} percentage split for ${escapeHtml(item.name)}"
+      title="${split.enabled ? 'Close' : 'Open'} percentage split" onclick="event.stopPropagation(); toggleItemSplit(${i}, ${!split.enabled})">%</button>`;
+
     html += `
       <div class="item-card ${assigned ? 'assigned' : ''} ${isSelected ? 'selected' : ''}" data-item-index="${i}"
            style="--person-color:${color}"
@@ -361,16 +369,9 @@ function renderItemsList() {
           </div>
           <div class="item-right">
             <div class="item-price">€${item.paid_price.toFixed(2)}</div>
-            ${badgeHtml}
+            <div class="item-actions">${badgeHtml}${splitButtonHtml}</div>
           </div>
         </div>
-        <label class="split-toggle" onclick="event.stopPropagation()">
-          <span>Split by percentage</span>
-          <input type="checkbox" role="switch" aria-label="Split ${escapeHtml(item.name)} by percentage"
-            aria-controls="split-controls-${i}" ${split.enabled ? 'checked' : ''}
-            onchange="toggleItemSplit(${i}, this.checked)">
-          <span class="switch-track" aria-hidden="true"></span>
-        </label>
         <div id="split-controls-${i}" class="split-controls" ${split.enabled ? '' : 'hidden'}
           onclick="event.stopPropagation()">
           ${split.enabled ? renderSplitControls(i) : ''}
@@ -396,9 +397,11 @@ function renderSplitControls(idx) {
   const percentages = appState.splits[idx].percentages;
   const colors = getColors();
   const twoPeople = people.length === 2;
-  const itemShares = isValidPercentages(percentages, people)
-    ? splitByPercentages(appState.receipt.items[idx].paid_price, percentages) : {};
-  const shareText = person => itemShares[person] == null ? '—' : `€${itemShares[person].toFixed(2)}`;
+  const amounts = previewPercentageAmounts(appState.receipt.items[idx].paid_price, percentages, people);
+  const shareText = person => {
+    const amount = amounts[person];
+    return amount == null ? '—' : `€${amount.toFixed(2)}`;
+  };
   const fields = (twoPeople ? people.slice(0, 1) : people).map((person, personIdx) => {
     const value = percentages[person];
     const name = escapeHtml(person);
@@ -412,13 +415,18 @@ function renderSplitControls(idx) {
             oninput="updateItemPercentage(${idx}, ${personIdx}, this)">
           <span aria-hidden="true">%</span>
         </div>
-        <input class="percentage-slider" type="range" min="0" max="100" step="0.01"
-          value="${value ?? 0}" aria-label="${name} percentage slider" aria-describedby="split-status-${idx}"
+        <input class="percentage-slider" type="range" min="0" max="100" step="1"
+          value="${Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 0}"
+          aria-label="${name} percentage slider" aria-describedby="split-status-${idx}"
           style="--slider-color:${colors[person]}" data-percentage-input="${personIdx}"
           oninput="updateItemPercentage(${idx}, ${personIdx}, this)">
       </div>`;
   }).join('');
   return `
+    <div class="split-controls-head">
+      <span class="split-controls-title">Percentage split</span>
+      <button type="button" class="normalize-button" onclick="normalizeItemSplit(${idx})">Normalize</button>
+    </div>
     ${twoPeople ? `<div class="split-pair-labels">${people.map((person, personIdx) => `
       <span style="color:${colors[person]}"><span>${escapeHtml(person)}</span> <strong data-percentage-label="${personIdx}">${percentages[person] == null ? '—' : percentages[person] + '%'}</strong> <strong class="split-person-price" data-share-price="${personIdx}">${shareText(person)}</strong></span>`).join('')}</div>` : ''}
     ${fields}
@@ -445,8 +453,19 @@ function toggleItemSplit(idx, enabled) {
   renderProgress();
   renderTotalsBar();
   renderItemsList();
-  // Keep keyboard focus on the switch after replacing the item cards.
-  document.querySelector(`[data-item-index="${idx}"] [role="switch"]`).focus({ preventScroll: true });
+  // Keep keyboard focus on the compact control after replacing the item cards.
+  document.querySelector(`[data-item-index="${idx}"] .split-menu-button`).focus({ preventScroll: true });
+}
+
+function normalizeItemSplit(idx) {
+  const people = getPeople();
+  appState.splits[idx].percentages = normalizePercentages(appState.splits[idx].percentages, people);
+  appState.selectedIdx = idx;
+  rememberSplit(idx);
+  renderProgress();
+  renderTotalsBar();
+  renderItemsList();
+  document.querySelector(`[data-item-index="${idx}"] .normalize-button`).focus({ preventScroll: true });
 }
 
 function updateItemPercentage(idx, personIdx, input) {
@@ -470,11 +489,11 @@ function updateItemPercentage(idx, personIdx, input) {
     const percentage = split.percentages[people[Number(label.dataset.percentageLabel)]];
     label.textContent = percentage == null ? '—' : `${percentage}%`;
   });
-  const itemShares = isValidPercentages(split.percentages, people)
-    ? splitByPercentages(appState.receipt.items[idx].paid_price, split.percentages) : {};
+  const amounts = previewPercentageAmounts(appState.receipt.items[idx].paid_price, split.percentages, people);
   card.querySelectorAll('[data-share-price]').forEach(label => {
     const person = people[Number(label.dataset.sharePrice)];
-    label.textContent = itemShares[person] == null ? '—' : `€${itemShares[person].toFixed(2)}`;
+    const amount = amounts[person];
+    label.textContent = amount == null ? '—' : `€${amount.toFixed(2)}`;
   });
   const valid = isValidPercentages(split.percentages, people);
   const status = document.getElementById(`split-status-${idx}`);
@@ -621,6 +640,6 @@ new ResizeObserver(entries => {
 
 // Expose functions called from HTML onclick attributes
 Object.assign(window, {
-  handleParse, selectItem, assignSelected, toggleItemSplit, updateItemPercentage, goBack, goSettle, goAssign, startOver,
+  handleParse, selectItem, assignSelected, toggleItemSplit, normalizeItemSplit, updateItemPercentage, goBack, goSettle, goAssign, startOver,
   openSettings, closeSettings, saveSettings, addSettingsPerson, removeSettingsPerson, selectPayer,
 });

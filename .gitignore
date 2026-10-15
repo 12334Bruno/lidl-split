@@ -3,3 +3,5 @@ dist
 lcov.info
 /repomix-output.xml
 /*.kate-swp
+playwright-report/
+test-results/

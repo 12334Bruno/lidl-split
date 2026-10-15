@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   round2, splitEqually, computeRunningTotals, computeSettlement,
-  equalPercentages, isValidPercentages, splitByPercentages,
+  equalPercentages, isValidPercentages, normalizePercentages, percentageAmount, previewPercentageAmounts, splitByPercentages,
 } from './../src/money.js';
 
 describe('round2', () => {
@@ -101,6 +101,69 @@ describe('percentage splits', () => {
   test('accepts decimal shares and zero shares', () => {
     assert.equal(isValidPercentages({ Alice: 33.33, Bob: 66.67 }), true);
     assert.equal(isValidPercentages({ Alice: 0, Bob: 100 }), true);
+  });
+
+  test('shows each person\'s current euro amount even when the total is incomplete', () => {
+    assert.equal(percentageAmount(10, 50), 5);
+    assert.equal(percentageAmount(10, 75), 7.5);
+    assert.equal(percentageAmount(10, 125), 12.5);
+    assert.equal(percentageAmount(10, null), null);
+  });
+
+  test('normalizes slider ratios to whole percentages totaling 100', () => {
+    assert.deepEqual(normalizePercentages({ Alice: 50, Bob: 75 }, ['Alice', 'Bob']), {
+      Alice: 40, Bob: 60,
+    });
+    assert.deepEqual(normalizePercentages({ Alice: 1, Bob: 1, Carol: 1 }, ['Alice', 'Bob', 'Carol']), {
+      Alice: 34, Bob: 33, Carol: 33,
+    });
+    assert.deepEqual(normalizePercentages({ Alice: 0, Bob: 0 }, ['Alice', 'Bob']), {
+      Alice: 50, Bob: 50,
+    });
+    assert.deepEqual(normalizePercentages({ Alice: -10, Bob: 2, Carol: null }, ['Alice', 'Bob', 'Carol']), {
+      Alice: 0, Bob: 100, Carol: 0,
+    });
+  });
+
+  test('keeps normalized ratios within one percent of their ideal shares for two to eight people', () => {
+    for (let count = 2; count <= 8; count++) {
+      const names = Array.from({ length: count }, (_, i) => `Person ${i + 1}`);
+      const values = names.map((_, i) => i * 17);
+      const percentages = Object.fromEntries(names.map((name, i) => [name, values[i]]));
+      const total = values.reduce((sum, value) => sum + value, 0);
+      const normalized = normalizePercentages(percentages, names);
+      assert.ok(isValidPercentages(normalized, names));
+      assert.equal(normalized[names[0]], 0, 'a zero share stays zero');
+      names.forEach((name, i) => {
+        assert.ok(Number.isInteger(normalized[name]));
+        assert.ok(Math.abs(normalized[name] - values[i] / total * 100) < 1);
+      });
+      assert.deepEqual(normalizePercentages(normalized, names), normalized);
+    }
+  });
+
+  test('normalizes large entered values without overflowing', () => {
+    assert.deepEqual(normalizePercentages({ Alice: Number.MAX_VALUE, Bob: Number.MAX_VALUE }), {
+      Alice: 50, Bob: 50,
+    });
+  });
+
+  test('previews incomplete and excessive totals without normalizing their prices', () => {
+    assert.deepEqual(previewPercentageAmounts(10, { Alice: 10, Bob: 20, Carol: 30 }), {
+      Alice: 1, Bob: 2, Carol: 3,
+    });
+    assert.deepEqual(previewPercentageAmounts(10, { Alice: 50, Bob: 75, Carol: 0 }), {
+      Alice: 5, Bob: 7.5, Carol: 0,
+    });
+    assert.deepEqual(previewPercentageAmounts(10, { Alice: null, Bob: 20, Carol: 30 }), {
+      Alice: null, Bob: 2, Carol: 3,
+    });
+  });
+
+  test('previews a completed split using the exact same cents as settlement', () => {
+    assert.deepEqual(previewPercentageAmounts(0.01, { Alice: 50, Bob: 50 }), {
+      Alice: 0.01, Bob: 0,
+    });
   });
 
   test('rejects incomplete, out-of-range, or over-precise percentages', () => {

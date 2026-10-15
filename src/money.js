@@ -21,6 +21,34 @@ export function equalPercentages(people) {
   ]));
 }
 
+export function percentageAmount(total, percentage) {
+  if (typeof percentage !== 'number' || !Number.isFinite(percentage)) return null;
+  return round2(total * percentage / 100);
+}
+
+// Keep the current proportions, then round to whole percentages that total 100.
+export function normalizePercentages(percentages, people = Object.keys(percentages ?? {})) {
+  if (!people.length) return {};
+  const values = people.map(person => {
+    const value = percentages?.[person];
+    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+  });
+  const largest = Math.max(...values);
+  const source = largest > 0 ? values.map(value => value / largest) : people.map(() => 1);
+  const sourceTotal = source.reduce((sum, value) => sum + value, 0);
+  const exact = source.map(value => value / sourceTotal * 100);
+  const whole = exact.map(Math.floor);
+  let remaining = 100 - whole.reduce((sum, value) => sum + value, 0);
+  const order = exact.map((value, index) => ({ index, fraction: value - whole[index] }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  for (const entry of order) {
+    if (remaining <= 0) break;
+    whole[entry.index]++;
+    remaining--;
+  }
+  return Object.fromEntries(people.map((person, index) => [person, whole[index]]));
+}
+
 export function isValidPercentages(percentages, people = Object.keys(percentages ?? {})) {
   if (!percentages || people.length < 2 || Object.keys(percentages).length !== people.length) return false;
   const values = people.map(person => percentages[person]);
@@ -46,6 +74,11 @@ export function splitByPercentages(total, percentages) {
   return Object.fromEntries(parts.map(part => [
     part.person, part.cents === 0 ? 0 : (total < 0 ? -part.cents : part.cents) / 100,
   ]));
+}
+
+export function previewPercentageAmounts(total, percentages, people = Object.keys(percentages ?? {})) {
+  if (isValidPercentages(percentages, people)) return splitByPercentages(total, percentages);
+  return Object.fromEntries(people.map(person => [person, percentageAmount(total, percentages?.[person])]));
 }
 
 // Running per-person totals during assignment (null entries are skipped).
