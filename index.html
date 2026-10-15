@@ -6,7 +6,7 @@
   <title>Lidl-Split</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=percentage-splits-1">
   <!-- Icons from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE -->
 </head>
 <body>
@@ -46,7 +46,7 @@
         <div class="step"><div class="step-num">1</div><p>Open Lidl Plus → Account → Digital Receipt, pick a receipt and copy all the text.</p></div>
         <div class="step"><div class="step-num">2</div><p>Paste the text above and tap <strong>Parse Receipt</strong>.</p></div>
         <div class="step"><div class="step-num">3</div><p>Tap an item to select it (highlighted in blue), then tap a person button at the bottom. Selection moves to the next unassigned item automatically.</p></div>
-        <div class="step"><div class="step-num">4</div><p>Tap <strong>Done</strong> to see who owes what.</p></div>
+        <div class="step"><div class="step-num">4</div><p>For an uneven split, turn on <strong>Split by percentage</strong> on an item. Your browser remembers the switch and percentages for next time. Tap <strong>Done</strong> to see who owes what.</p></div>
       </div>
     </div>
 
@@ -65,13 +65,14 @@
 
       <div class="fab-bar">
         <div class="person-btns" id="person-btns"></div>
+        <p id="split-error" class="split-error" role="status" hidden>Finish percentage splits to include them in totals and continue.</p>
         <div class="nav-btns">
           <button class="nav-btn" onclick="goBack()">
             <!-- lucide:arrow-left -->
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" class="lucide" class="lucide"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 19l-7-7l7-7m7 7H5"/></svg>
             <span>Back</span>
           </button>
-          <button class="nav-btn done" onclick="goSettle()">
+          <button id="assign-done" class="nav-btn done" onclick="goSettle()">
             <span>Done</span>
             <!-- lucide:check -->
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" class="lucide"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg>
@@ -135,6 +136,6 @@
   </div>
 </div>
 
-  <script type="module" src="src/app.js"></script>
+  <script type="module" src="src/app.js?v=percentage-splits-1"></script>
 </body>
 </html>

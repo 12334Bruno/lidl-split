@@ -1,6 +1,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { round2, splitEqually, computeRunningTotals, computeSettlement } from './../src/money.js';
+import {
+  round2, splitEqually, computeRunningTotals, computeSettlement,
+  equalPercentages, isValidPercentages, splitByPercentages,
+} from './../src/money.js';
 
 describe('round2', () => {
   test('handles exact values', () => {
@@ -83,6 +86,63 @@ describe('splitEqually', () => {
   });
 });
 
+describe('percentage splits', () => {
+  test('starts with equal percentages that add up to 100 for two to eight people', () => {
+    for (let count = 2; count <= 8; count++) {
+      const people = Array.from({ length: count }, (_, i) => `Person ${i + 1}`);
+      const percentages = equalPercentages(people);
+      assert.ok(isValidPercentages(percentages, people), `${count} people must total 100%`);
+      const values = Object.values(percentages);
+      assert.ok(Math.max(...values) - Math.min(...values) < 0.08);
+    }
+    assert.deepEqual(equalPercentages(['Alice', 'Bob']), { Alice: 50, Bob: 50 });
+  });
+
+  test('accepts decimal shares and zero shares', () => {
+    assert.equal(isValidPercentages({ Alice: 33.33, Bob: 66.67 }), true);
+    assert.equal(isValidPercentages({ Alice: 0, Bob: 100 }), true);
+  });
+
+  test('rejects incomplete, out-of-range, or over-precise percentages', () => {
+    for (const percentages of [
+      {}, { Alice: 100 }, { Alice: 30, Bob: 60 }, { Alice: 60, Bob: 60 },
+      { Alice: -10, Bob: 110 }, { Alice: null, Bob: 100 },
+      { Alice: NaN, Bob: 100 }, { Alice: Infinity, Bob: 0 },
+      { Alice: '50', Bob: 50 }, { Alice: 33.333, Bob: 66.667 },
+    ]) assert.equal(isValidPercentages(percentages), false, JSON.stringify(percentages));
+    assert.equal(isValidPercentages({ Alice: 50, Bob: 50 }, ['Alice', 'Carol']), false);
+  });
+
+  test('splits a two-person item using the chosen percentages', () => {
+    assert.deepEqual(splitByPercentages(10, { Alice: 25, Bob: 75 }), { Alice: 2.5, Bob: 7.5 });
+  });
+
+  test('keeps the full item price when rounding three decimal shares', () => {
+    assert.deepEqual(splitByPercentages(10, { Alice: 33.34, Bob: 33.33, Carol: 33.33 }), {
+      Alice: 3.34, Bob: 3.33, Carol: 3.33,
+    });
+  });
+
+  test('never charges a zero-percent person when distributing leftover cents', () => {
+    assert.deepEqual(splitByPercentages(0.01, { Alice: 0, Bob: 50, Carol: 50 }), {
+      Alice: 0, Bob: 0.01, Carol: 0,
+    });
+  });
+
+  test('conserves cents for tiny amounts, returns, and eight-person groups', () => {
+    const percentages = equalPercentages(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+    for (const amount of [0, 0.01, 0.02, 0.07, 1.01, 10.99, 115.11, -0.01, -10.99]) {
+      const shares = Object.values(splitByPercentages(amount, percentages));
+      assert.equal(round2(shares.reduce((sum, share) => sum + share, 0)), amount);
+      assert.ok(shares.every(share => amount < 0 ? share <= 0 : share >= 0));
+    }
+  });
+
+  test('refuses to calculate an invalid split', () => {
+    assert.throws(() => splitByPercentages(10, { Alice: 40, Bob: 40 }), /100%/);
+  });
+});
+
 describe('computeRunningTotals', () => {
   test('returns empty object when nothing is assigned', () => {
     const items = [{ paid_price: 1.00 }, { paid_price: 2.00 }];
@@ -122,10 +182,54 @@ describe('computeRunningTotals', () => {
     const result = computeRunningTotals(items, ['Alice', 'Alice']);
     assert.equal(result.Alice, 0.3);
   });
+
+  test('percentage splits override ordinary assignments in live totals', () => {
+    const items = [{ paid_price: 10 }, { paid_price: 2 }];
+    const splits = [{ enabled: true, percentages: { Alice: 25, Bob: 75 } }];
+    assert.deepEqual(computeRunningTotals(items, ['Common', 'Alice'], splits), { Alice: 4.5, Bob: 7.5 });
+  });
+
+  test('unfinished percentage splits stay out of live totals', () => {
+    const items = [{ paid_price: 10 }, { paid_price: 2 }];
+    const splits = [{ enabled: true, percentages: { Alice: 25, Bob: 50 } }];
+    assert.deepEqual(computeRunningTotals(items, ['Common', 'Alice'], splits), { Alice: 2 });
+  });
+
+  test('a disabled percentage split uses the ordinary assignment', () => {
+    const splits = [{ enabled: false, percentages: { Alice: 25, Bob: 75 } }];
+    assert.deepEqual(computeRunningTotals([{ paid_price: 10 }], ['Alice'], splits), { Alice: 10 });
+  });
 });
 
 describe('computeSettlement', () => {
   const makeReceipt = (items, discounts = []) => ({ items, discounts });
+
+  test('combines custom percentages with personal items, equal shares, and discounts', () => {
+    const receipt = makeReceipt([
+      { name: 'Coffee', paid_price: 10 }, { name: 'Bread', paid_price: 3 },
+      { name: 'Milk', paid_price: 2 },
+    ], [{ name: 'Discount', amount: -1 }]);
+    const splits = [{ enabled: true, percentages: { Alice: 50, Bob: 30, Carol: 20 } }];
+    const result = computeSettlement(receipt, ['Common', 'Bob', null], ['Alice', 'Bob', 'Carol'], 'Common', splits);
+    assert.deepEqual(result.settlements.map(s => s.owes), [5.34, 6.33, 2.33]);
+    assert.equal(round2(result.settlements.reduce((sum, s) => sum + s.owes, 0)), 14);
+    assert.equal(result.commonTotal, 1);
+    assert.deepEqual(result.settlements[1].ownItems, [
+      { name: 'Coffee', price: 3, percentage: 30 }, { name: 'Bread', price: 3 },
+    ]);
+    assert.deepEqual(result.commonItems, [
+      { name: 'Milk', price: 2 }, { name: 'Total discount', price: -1 },
+    ]);
+  });
+
+  test('rejects invalid or outdated percentage splits before settlement', () => {
+    const receipt = makeReceipt([{ name: 'Coffee', paid_price: 10 }]);
+    for (const percentages of [{ Alice: 40, Bob: 40 }, { Alice: 50, Carol: 50 }]) {
+      assert.throws(() => computeSettlement(receipt, [null], ['Alice', 'Bob'], 'Common', [
+        { enabled: true, percentages },
+      ]), /100%/);
+    }
+  });
 
   test('basic 2-person split, no common items', () => {
     const receipt = makeReceipt([
