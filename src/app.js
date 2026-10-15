@@ -1,5 +1,5 @@
 import { parseLidlText } from './parser.js';
-import { round2, computeRunningTotals, computeSettlement, equalPercentages, isValidPercentages } from './money.js?v=percentage-splits-1';
+import { round2, computeRunningTotals, computeSettlement, equalPercentages, isValidPercentages, splitByPercentages } from './money.js?v=percentage-splits-2';
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -396,11 +396,14 @@ function renderSplitControls(idx) {
   const percentages = appState.splits[idx].percentages;
   const colors = getColors();
   const twoPeople = people.length === 2;
+  const itemShares = isValidPercentages(percentages, people)
+    ? splitByPercentages(appState.receipt.items[idx].paid_price, percentages) : {};
+  const shareText = person => itemShares[person] == null ? '—' : `€${itemShares[person].toFixed(2)}`;
   const fields = (twoPeople ? people.slice(0, 1) : people).map((person, personIdx) => {
     const value = percentages[person];
     const name = escapeHtml(person);
     return `
-      ${twoPeople ? '' : `<label class="split-person" for="percentage-${idx}-${personIdx}" style="color:${colors[person]}">${name}</label>`}
+      ${twoPeople ? '' : `<label class="split-person" for="percentage-${idx}-${personIdx}" style="color:${colors[person]}"><span>${name}</span><strong class="split-person-price" data-share-price="${personIdx}">${shareText(person)}</strong></label>`}
       <div class="split-row">
         <div class="percentage-field">
           <input id="percentage-${idx}-${personIdx}" type="number" min="0" max="100" step="0.01"
@@ -417,7 +420,7 @@ function renderSplitControls(idx) {
   }).join('');
   return `
     ${twoPeople ? `<div class="split-pair-labels">${people.map((person, personIdx) => `
-      <span style="color:${colors[person]}">${escapeHtml(person)} <strong data-percentage-label="${personIdx}">${percentages[person] == null ? '—' : percentages[person] + '%'}</strong></span>`).join('')}</div>` : ''}
+      <span style="color:${colors[person]}"><span>${escapeHtml(person)}</span> <strong data-percentage-label="${personIdx}">${percentages[person] == null ? '—' : percentages[person] + '%'}</strong> <strong class="split-person-price" data-share-price="${personIdx}">${shareText(person)}</strong></span>`).join('')}</div>` : ''}
     ${fields}
     <p id="split-status-${idx}" class="split-status ${isValidPercentages(percentages, people) ? '' : 'invalid'}" role="status">${splitStatusText(percentages)}</p>`;
 }
@@ -466,6 +469,12 @@ function updateItemPercentage(idx, personIdx, input) {
   card.querySelectorAll('[data-percentage-label]').forEach(label => {
     const percentage = split.percentages[people[Number(label.dataset.percentageLabel)]];
     label.textContent = percentage == null ? '—' : `${percentage}%`;
+  });
+  const itemShares = isValidPercentages(split.percentages, people)
+    ? splitByPercentages(appState.receipt.items[idx].paid_price, split.percentages) : {};
+  card.querySelectorAll('[data-share-price]').forEach(label => {
+    const person = people[Number(label.dataset.sharePrice)];
+    label.textContent = itemShares[person] == null ? '—' : `€${itemShares[person].toFixed(2)}`;
   });
   const valid = isValidPercentages(split.percentages, people);
   const status = document.getElementById(`split-status-${idx}`);

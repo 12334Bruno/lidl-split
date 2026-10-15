@@ -117,10 +117,22 @@ describe('percentage splits', () => {
     assert.deepEqual(splitByPercentages(10, { Alice: 25, Bob: 75 }), { Alice: 2.5, Bob: 7.5 });
   });
 
+  test('provides the current euro price for every two-person split row', () => {
+    const shares = splitByPercentages(14.99, { Alice: 25, Bob: 75 });
+    assert.equal(shares.Alice.toFixed(2), '3.75');
+    assert.equal(shares.Bob.toFixed(2), '11.24');
+    assert.equal(round2(Object.values(shares).reduce((sum, amount) => sum + amount, 0)), 14.99);
+  });
+
   test('keeps the full item price when rounding three decimal shares', () => {
     assert.deepEqual(splitByPercentages(10, { Alice: 33.34, Bob: 33.33, Carol: 33.33 }), {
       Alice: 3.34, Bob: 3.33, Carol: 3.33,
     });
+  });
+
+  test('provides the current euro price for every three-person split row', () => {
+    const shares = splitByPercentages(12.00, { Alice: 50, Bob: 30, Carol: 20 });
+    assert.deepEqual(shares, { Alice: 6, Bob: 3.6, Carol: 2.4 });
   });
 
   test('never charges a zero-percent person when distributing leftover cents', () => {

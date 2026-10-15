@@ -543,6 +543,9 @@ input[type="text"]:focus {
   font-size: 13px;
 }
 .split-pair-labels > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
   max-width: 48%;
   overflow-wrap: anywhere;
 }
@@ -550,8 +553,19 @@ input[type="text"]:focus {
   text-align: right;
 }
 .split-person {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 2px;
   overflow-wrap: anywhere;
+}
+.split-person-price {
+  flex-shrink: 0;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
 }
 .split-row {
   display: grid;
