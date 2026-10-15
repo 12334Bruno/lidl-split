@@ -602,11 +602,52 @@ input[type="text"]:focus {
   outline: none;
 }
 .percentage-slider {
+  appearance: none;
+  -webkit-appearance: none;
   width: 100%;
   min-width: 0;
   height: 40px;
-  accent-color: var(--slider-color, var(--primary));
+  background: transparent;
   cursor: pointer;
+}
+.percentage-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 99px;
+  background: linear-gradient(to right,
+    var(--slider-color, var(--primary)) var(--slider-progress, 50%),
+    var(--border) var(--slider-progress, 50%));
+}
+.percentage-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 32px;
+  margin-top: -13px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--slider-color, var(--primary));
+}
+.percentage-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--border);
+}
+.percentage-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--slider-color, var(--primary));
+}
+.percentage-slider::-moz-range-thumb {
+  width: 16px;
+  height: 32px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--slider-color, var(--primary));
+}
+.percentage-slider:focus-visible {
+  outline: 2px solid var(--slider-color, var(--primary));
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 .split-status {
   font-size: 12px;

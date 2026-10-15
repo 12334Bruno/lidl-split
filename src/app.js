@@ -1,4 +1,5 @@
 import { parseLidlText } from './parser.js';
+import { enhanceSliderHaptics } from './haptics.js?v=slider-feedback-1';
 import {
   round2, computeRunningTotals, computeSettlement, equalPercentages,
   isValidPercentages, normalizePercentages, previewPercentageAmounts,
@@ -404,6 +405,7 @@ function renderSplitControls(idx) {
   };
   const fields = (twoPeople ? people.slice(0, 1) : people).map((person, personIdx) => {
     const value = percentages[person];
+    const sliderValue = Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 0;
     const name = escapeHtml(person);
     return `
       ${twoPeople ? '' : `<label class="split-person" for="percentage-${idx}-${personIdx}" style="color:${colors[person]}"><span>${name}</span><strong class="split-person-price" data-share-price="${personIdx}">${shareText(person)}</strong></label>`}
@@ -416,9 +418,9 @@ function renderSplitControls(idx) {
           <span aria-hidden="true">%</span>
         </div>
         <input class="percentage-slider" type="range" min="0" max="100" step="1"
-          value="${Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 0}"
+          value="${sliderValue}"
           aria-label="${name} percentage slider" aria-describedby="split-status-${idx}"
-          style="--slider-color:${colors[person]}" data-percentage-input="${personIdx}"
+          style="--slider-color:${colors[person]};--slider-progress:${sliderValue}%" data-percentage-input="${personIdx}"
           oninput="updateItemPercentage(${idx}, ${personIdx}, this)">
       </div>`;
   }).join('');
@@ -484,6 +486,7 @@ function updateItemPercentage(idx, personIdx, input) {
       const percentage = split.percentages[people[Number(field.dataset.percentageInput)]];
       field.value = percentage ?? (field.type === 'range' ? 0 : '');
     }
+    if (field.type === 'range') field.style.setProperty('--slider-progress', `${field.value}%`);
   });
   card.querySelectorAll('[data-percentage-label]').forEach(label => {
     const percentage = split.percentages[people[Number(label.dataset.percentageLabel)]];
@@ -631,6 +634,8 @@ function renderSettlement() {
 document.getElementById('settings-modal').addEventListener('click', function(e) {
   if (e.target === this) closeSettings();
 });
+
+enhanceSliderHaptics(document.getElementById('items-list'));
 
 // Leave room for all the buttons, including when more people are added.
 new ResizeObserver(entries => {
