@@ -310,6 +310,12 @@ textarea:focus {
   text-align: center;
 }
 
+.usage-tips kbd svg {
+  width: 12px;
+  height: 12px;
+  vertical-align: -2px;
+}
+
 /* ── Settings Modal ── */
 .modal-overlay {
   display: none;
