@@ -885,32 +885,39 @@ input[type="text"]:focus {
 /* Settings person rows */
 .settings-person-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
+  width: 100%;
   margin-bottom: 8px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.settings-person-row:focus-within {
+  border-color: var(--primary);
 }
 .settings-person-num {
-  width: 20px;
-  text-align: center;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
   font-size: 13px;
   font-weight: 700;
   color: var(--muted);
   flex-shrink: 0;
 }
-.settings-person-input {
+.settings-person-input[type="text"] {
   flex: 1;
-  padding: 10px 12px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: 'Barlow', sans-serif;
-  font-size: 15px;
-  outline: none;
-  transition: border-color .15s;
-}
-.settings-person-input:focus {
-  border-color: var(--primary);
+  min-width: 0;
+  width: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 .settings-remove-btn {
+  align-self: center;
+  margin: 0 8px;
   width: 28px;
   height: 28px;
   border: none;

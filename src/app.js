@@ -53,8 +53,8 @@ function renderSettingsPeople(people) {
       <input type="text" class="settings-person-input" value="${escapeHtml(name)}"
         data-original-name="${escapeHtml(original)}" aria-label="Person ${i + 1} name" placeholder="Name">
       ${people.length > 2
-        ? `<button class="settings-remove-btn" onclick="removeSettingsPerson(${i})">✕</button>`
-        : '<span style="width:28px"></span>'}
+        ? `<button class="settings-remove-btn" aria-label="Remove person ${i + 1}" onclick="removeSettingsPerson(${i})">✕</button>`
+        : ''}
     </div>`;
   }).join('');
 }
