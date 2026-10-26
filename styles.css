@@ -297,6 +297,19 @@ textarea:focus {
   line-height: 1.5;
 }
 
+.usage-tips kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 4px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: 12px/1.4 'JetBrains Mono', monospace;
+  text-align: center;
+}
+
 /* ── Settings Modal ── */
 .modal-overlay {
   display: none;
