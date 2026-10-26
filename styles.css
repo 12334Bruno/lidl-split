@@ -499,6 +499,7 @@ input[type="text"]:focus {
   transform: none;
 }
 .item-main {
+  -webkit-touch-callout: none;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -566,7 +567,6 @@ input[type="text"]:focus {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 6px;
-  font-size: 13px;
 }
 .split-pair-labels > span {
   display: inline-flex;
@@ -592,7 +592,7 @@ input[type="text"]:focus {
   flex-shrink: 0;
   color: var(--text);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: inherit;
   font-weight: 500;
 }
 .split-row {
@@ -729,8 +729,12 @@ input[type="text"]:focus {
   flex: 1;
   min-width: 0;
 }
-.item-name {
+.item-name,
+.split-pair-labels,
+.split-person {
   font-size: 15px;
+}
+.item-name {
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;

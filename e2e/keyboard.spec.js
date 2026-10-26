@@ -268,3 +268,84 @@ test('includes open sliders in the keyboard scroll buffer', async ({ page }) => 
     await expectVisibleBetweenBars(next);
   }
 });
+
+test('opens Google Images in a new tab after a mobile long press', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Native touch injection uses the Chromium protocol.');
+  await context.route('https://www.google.com/search?*', route => route.fulfill({
+    contentType: 'text/html', body: '<title>Images</title>',
+  }));
+  const rows = await openReceipt(page, ['David', 'Bruno'], receipt.replace('Product 2 ', 'Winterpeen '));
+  const item = rows.nth(1).locator('.item-info');
+  await item.scrollIntoViewIfNeeded();
+  const box = await item.boundingBox();
+  const touch = await context.newCDPSession(page);
+  await page.clock.install();
+  await touch.send('Input.dispatchTouchEvent', {
+    type: 'touchStart', touchPoints: [{ x: box.x + 10, y: box.y + box.height / 2 }],
+  });
+  await page.clock.fastForward(650);
+  const popupOpened = page.waitForEvent('popup');
+  await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  const popup = await popupOpened;
+  await expect(popup).toHaveURL('https://www.google.com/search?udm=2&q=Winterpeen');
+  expect(await popup.evaluate(() => window.opener)).toBeNull();
+  await popup.close();
+});
+
+test('does not search for taps, swipes, cancelled touches, mouse holds, or control holds', async ({ page }) => {
+  const rows = await openReceipt(page);
+  await rows.first().locator('.split-menu-button').click();
+  await page.clock.install();
+  await page.evaluate(() => {
+    window.searchCalls = [];
+    window.open = (...args) => { window.searchCalls.push(args); return null; };
+  });
+  const item = rows.first().locator('.item-info');
+  const touch = { pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: 50, clientY: 300 };
+
+  await item.dispatchEvent('pointerdown', touch);
+  await page.clock.fastForward(100);
+  await item.dispatchEvent('pointerup', touch);
+
+  await item.dispatchEvent('pointerdown', touch);
+  await item.dispatchEvent('pointermove', { ...touch, clientY: 330 });
+  await page.clock.fastForward(650);
+  await item.dispatchEvent('pointerup', touch);
+
+  await item.dispatchEvent('pointerdown', touch);
+  await item.dispatchEvent('pointercancel', touch);
+  await page.clock.fastForward(650);
+  await item.dispatchEvent('pointerup', touch);
+
+  await item.dispatchEvent('pointerdown', { ...touch, pointerType: 'mouse' });
+  await page.clock.fastForward(650);
+  await item.dispatchEvent('pointerup', { ...touch, pointerType: 'mouse' });
+
+  for (const control of [rows.first().locator('.split-menu-button'), rows.first().getByRole('slider')]) {
+    await control.dispatchEvent('pointerdown', touch);
+    await page.clock.fastForward(650);
+    await control.dispatchEvent('pointerup', touch);
+  }
+  expect(await page.evaluate(() => window.searchCalls)).toEqual([]);
+});
+
+test('cancels long presses when a second finger touches or the page scrolls', async ({ page }) => {
+  const rows = await openReceipt(page);
+  await page.clock.install();
+  await page.evaluate(() => {
+    window.searchCalls = [];
+    window.open = (...args) => { window.searchCalls.push(args); return null; };
+  });
+  const item = rows.first().locator('.item-info');
+  const touch = { pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: 50, clientY: 300 };
+  await item.dispatchEvent('pointerdown', touch);
+  await item.dispatchEvent('pointerdown', { ...touch, pointerId: 2, isPrimary: false });
+  await page.clock.fastForward(650);
+  await item.dispatchEvent('pointerup', touch);
+
+  await item.dispatchEvent('pointerdown', touch);
+  await page.evaluate(() => document.dispatchEvent(new Event('scroll')));
+  await page.clock.fastForward(650);
+  await item.dispatchEvent('pointerup', touch);
+  expect(await page.evaluate(() => window.searchCalls)).toEqual([]);
+});

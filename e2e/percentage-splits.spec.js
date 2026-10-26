@@ -176,6 +176,12 @@ for (const count of [2, 3, 8]) {
     await card.locator('.split-menu-button').click();
     await expect(card.getByRole('slider')).toHaveCount(count === 2 ? 1 : count);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const labelsMatchItemSize = await card.evaluate(card => {
+      const itemSize = getComputedStyle(card.querySelector('.item-name')).fontSize;
+      return [...card.querySelectorAll('.split-pair-labels span, .split-pair-labels strong, .split-person, .split-person-price')]
+        .every(label => getComputedStyle(label).fontSize === itemSize);
+    });
+    expect(labelsMatchItemSize).toBe(true);
     const rowsFit = await card.locator('.split-row').evaluateAll(rows => rows.every(row => {
       const box = row.querySelector('.percentage-field').getBoundingClientRect();
       const slider = row.querySelector('.percentage-slider').getBoundingClientRect();

@@ -593,6 +593,49 @@ function focusAssignmentTarget(target, direction = 0) {
   keepAssignmentTargetVisible(target === card ? card.querySelector('.item-main') : target, direction);
 }
 
+function openItemImages(idx) {
+  const itemName = appState.receipt.items[idx].name;
+  window.open(`https://www.google.com/search?udm=2&q=${encodeURIComponent(itemName)}`, '_blank', 'noopener,noreferrer');
+}
+
+/** Open a touch-held item's images on release, preserving the user gesture for mobile popup blockers. */
+function enableItemLongPress() {
+  let press = null;
+
+  document.addEventListener('pointerdown', event => {
+    press = null;
+    if (event.pointerType !== 'touch' || !event.isPrimary || appState.screen !== 'assign') return;
+    if (document.getElementById('settings-modal').classList.contains('open')) return;
+    const row = event.target.closest('#items-list .item-main');
+    if (!row || event.target.closest('button, input, a')) return;
+    press = {
+      card: row.closest('.item-card'), pointerId: event.pointerId,
+      x: event.clientX, y: event.clientY, startedAt: performance.now(),
+    };
+  });
+
+  document.addEventListener('pointermove', event => {
+    if (press?.pointerId !== event.pointerId) return;
+    if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) press = null;
+  });
+
+  document.addEventListener('pointerup', event => {
+    if (press?.pointerId !== event.pointerId) return;
+    const held = press;
+    press = null;
+    if (performance.now() - held.startedAt < 600 || !held.card.isConnected) return;
+    if (appState.screen !== 'assign' || document.getElementById('settings-modal').classList.contains('open')) return;
+    openItemImages(Number(held.card.dataset.itemIndex));
+  });
+
+  document.addEventListener('contextmenu', event => {
+    if (press?.card.contains(event.target)) event.preventDefault();
+  });
+  document.addEventListener('pointercancel', () => { press = null; });
+  document.addEventListener('scroll', () => { press = null; }, true);
+  window.addEventListener('blur', () => { press = null; });
+}
+
 /** Navigate rows and their open sliders without intercepting typing or browser shortcuts. */
 function handleAssignmentKey(event) {
   if (appState.screen !== 'assign' || document.getElementById('settings-modal').classList.contains('open')) return;
@@ -607,8 +650,7 @@ function handleAssignmentKey(event) {
 
   if (event.key === '?') {
     event.preventDefault();
-    const itemName = appState.receipt.items[idx].name;
-    window.open(`https://www.google.com/search?udm=2&q=${encodeURIComponent(itemName)}`, '_blank', 'noopener,noreferrer');
+    openItemImages(idx);
     return;
   }
 
@@ -735,6 +777,7 @@ document.getElementById('settings-modal').addEventListener('click', function(e) 
   if (e.target === this) closeSettings();
 });
 
+enableItemLongPress();
 document.addEventListener('keydown', handleAssignmentKey);
 document.getElementById('items-list').addEventListener('focusin', event => {
   const card = event.target.closest('.item-card');
