@@ -584,6 +584,13 @@ function handleAssignmentKey(event) {
   if (!card) return;
   const idx = Number(card.dataset.itemIndex);
 
+  if (event.key === '?') {
+    event.preventDefault();
+    const itemName = appState.receipt.items[idx].name;
+    window.open(`https://www.google.com/search?q=${encodeURIComponent(itemName)}`, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     event.preventDefault();
     const queue = [...document.querySelectorAll('.item-card, .split-controls:not([hidden]) .percentage-slider')];

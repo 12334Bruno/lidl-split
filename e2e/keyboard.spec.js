@@ -7,7 +7,7 @@ ${Array.from({ length: 20 }, (_, index) => `Product ${index + 1} 10,00 B`).join(
 Aantal 20 art.
 15-10-2026`;
 
-async function openReceipt(page, people = ['David', 'Bruno']) {
+async function openReceipt(page, people = ['David', 'Bruno'], text = receipt) {
   await page.addInitScript(names => {
     localStorage.setItem('people', JSON.stringify(names));
     window.vibrationCalls = [];
@@ -19,7 +19,7 @@ async function openReceipt(page, people = ['David', 'Bruno']) {
   await page.route('https://fonts.googleapis.com/**', route => route.fulfill({ contentType: 'text/css', body: '' }));
   await page.goto('./');
   await page.waitForFunction(() => typeof window.handleParse === 'function');
-  await page.locator('#receipt-input').fill(receipt);
+  await page.locator('#receipt-input').fill(text);
   await page.getByRole('button', { name: 'Parse Receipt' }).click();
   return page.locator('.item-card');
 }
@@ -175,4 +175,59 @@ test('changes the focused group slider without changing other shares', async ({ 
   await expect(rows.first().getByRole('spinbutton').nth(1)).toHaveValue('38');
   await expect(rows.first().getByRole('spinbutton').nth(2)).toHaveValue('33.33');
   await expect(sliders.nth(1)).toBeFocused();
+});
+
+
+for (const fromSlider of [false, true]) {
+  test(`searches the focused item's name in a new tab from its ${fromSlider ? 'slider' : 'row'}`, async ({ page, context }) => {
+    await context.route('https://www.google.com/search?*', route => route.fulfill({
+      contentType: 'text/html', body: '<title>Search</title>',
+    }));
+    const rows = await openReceipt(page, ['David', 'Bruno'], receipt.replace('Product 1 ', 'Winterpeen '));
+    await rows.first().click();
+    if (fromSlider) {
+      await page.keyboard.press('%');
+      await page.keyboard.press('ArrowDown');
+    }
+
+    const popupOpened = page.waitForEvent('popup');
+    await page.keyboard.press('?');
+    const popup = await popupOpened;
+    await expect(popup).toHaveURL('https://www.google.com/search?q=Winterpeen');
+    expect(await popup.evaluate(() => window.opener)).toBeNull();
+    await popup.close();
+    await expect(rows.first()).toHaveClass(/selected/);
+    if (fromSlider) await expect(rows.first().getByRole('slider')).toBeFocused();
+    else await expect(rows.first()).toBeFocused();
+  });
+}
+
+test('searches the current row and encodes accents and query punctuation', async ({ page, context }) => {
+  await context.route('https://www.google.com/search?*', route => route.fulfill({
+    contentType: 'text/html', body: '<title>Search</title>',
+  }));
+  await openReceipt(page, ['David', 'Bruno'], receipt.replace('Product 2 ', 'Crème & broccoli '));
+  await page.keyboard.press('ArrowDown');
+  const popupOpened = page.waitForEvent('popup');
+  await page.keyboard.press('?');
+  const popup = await popupOpened;
+  await expect(popup).toHaveURL(`https://www.google.com/search?q=${encodeURIComponent('Crème & broccoli')}`);
+  await popup.close();
+});
+
+test('does not search while typing, editing settings, or using modified shortcuts', async ({ page }) => {
+  const rows = await openReceipt(page);
+  await page.evaluate(() => {
+    window.searchCalls = [];
+    window.open = (...args) => { window.searchCalls.push(args); return null; };
+  });
+  await rows.first().focus();
+  await page.keyboard.press('Control+?');
+  await page.keyboard.press('%');
+  await rows.first().getByRole('spinbutton').press('?');
+  await page.getByTitle('Settings', { exact: true }).click();
+  await page.locator('.settings-person-input').first().press('?');
+  await page.locator('#settings-modal').getByRole('button', { name: 'Save', exact: true }).focus();
+  await page.keyboard.press('?');
+  expect(await page.evaluate(() => window.searchCalls)).toEqual([]);
 });
