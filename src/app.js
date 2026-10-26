@@ -547,16 +547,37 @@ function assignSelected(person, advanceOneRow = false) {
   renderProgress();
   renderTotalsBar();
   renderItemsList();
-  focusAssignmentTarget(document.querySelector(`[data-item-index="${appState.selectedIdx}"]`));
+  focusAssignmentTarget(document.querySelector(`[data-item-index="${appState.selectedIdx}"]`), advanceOneRow ? 1 : 0);
 }
 
-// Scroll the actual target clear of the sticky header and fixed assignment buttons.
-function keepAssignmentTargetVisible(target) {
+function getAssignmentTargets() {
+  return [...document.querySelectorAll('.item-card, .split-controls:not([hidden]) .percentage-slider')];
+}
+
+/** Keep focus clear of fixed bars, with one extra keyboard stop visible in the travel direction. */
+function keepAssignmentTargetVisible(target, direction = 0) {
   const box = target.getBoundingClientRect();
   const top = document.querySelector('header').getBoundingClientRect().bottom + 8;
   const bottom = document.querySelector('#screen-assign .fab-bar').getBoundingClientRect().top - 8;
-  if (box.top < top) window.scrollBy(0, box.top - top);
-  else if (box.bottom > bottom) window.scrollBy(0, Math.min(box.bottom - bottom, box.top - top));
+  let bufferedTop = box.top;
+  let bufferedBottom = box.bottom;
+
+  if (direction) {
+    const targets = getAssignmentTargets();
+    const current = target.matches('.percentage-slider') ? target : target.closest('.item-card');
+    const neighbor = targets[targets.indexOf(current) + direction];
+    if (neighbor) {
+      const isExpandedRow = neighbor.matches('.item-card') && !neighbor.querySelector('.split-controls').hidden;
+      const neighborContent = isExpandedRow ? neighbor.querySelector('.item-main') : neighbor;
+      const neighborBox = neighborContent.getBoundingClientRect();
+      if (direction < 0) bufferedTop = neighborBox.top;
+      else bufferedBottom = neighborBox.bottom;
+    }
+  }
+
+  // Prioritize the focused control when both stops cannot fit in the available height.
+  if (bufferedTop < top) window.scrollBy(0, Math.max(bufferedTop - top, box.bottom - bottom));
+  else if (bufferedBottom > bottom) window.scrollBy(0, Math.min(bufferedBottom - bottom, box.top - top));
 }
 
 function scrollToSelected() {
@@ -564,12 +585,12 @@ function scrollToSelected() {
   if (card) keepAssignmentTargetVisible(card.querySelector('.item-main'));
 }
 
-function focusAssignmentTarget(target) {
+function focusAssignmentTarget(target, direction = 0) {
   const card = target.closest('.item-card');
   appState.selectedIdx = Number(card.dataset.itemIndex);
   document.querySelectorAll('.item-card').forEach(item => item.classList.toggle('selected', item === card));
   target.focus({ preventScroll: true });
-  keepAssignmentTargetVisible(target === card ? card.querySelector('.item-main') : target);
+  keepAssignmentTargetVisible(target === card ? card.querySelector('.item-main') : target, direction);
 }
 
 /** Navigate rows and their open sliders without intercepting typing or browser shortcuts. */
@@ -593,10 +614,10 @@ function handleAssignmentKey(event) {
 
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     event.preventDefault();
-    const queue = [...document.querySelectorAll('.item-card, .split-controls:not([hidden]) .percentage-slider')];
+    const queue = getAssignmentTargets();
     const current = queue.indexOf(target.matches('.percentage-slider') ? target : card);
     const direction = event.key === 'ArrowDown' ? 1 : -1;
-    focusAssignmentTarget(queue[Math.max(0, Math.min(queue.length - 1, current + direction))]);
+    focusAssignmentTarget(queue[Math.max(0, Math.min(queue.length - 1, current + direction))], direction);
     return;
   }
 

@@ -231,3 +231,40 @@ test('does not search while typing, editing settings, or using modified shortcut
   await page.keyboard.press('?');
   expect(await page.evaluate(() => window.searchCalls)).toEqual([]);
 });
+
+test('keeps one row visible ahead of keyboard navigation in either direction', async ({ page }) => {
+  const rows = await openReceipt(page);
+  for (let index = 1; index < 19; index++) {
+    await page.keyboard.press('ArrowDown');
+    await expect(rows.nth(index)).toBeFocused();
+    await expectVisibleBetweenBars(rows.nth(index + 1));
+  }
+  for (let index = 17; index > 0; index--) {
+    await page.keyboard.press('ArrowUp');
+    await expect(rows.nth(index)).toBeFocused();
+    await expectVisibleBetweenBars(rows.nth(index - 1));
+  }
+});
+
+test('keeps the next row visible after assigning with a keyboard shortcut', async ({ page }) => {
+  const rows = await openReceipt(page);
+  for (let index = 1; index < 19; index++) {
+    await page.keyboard.press('d');
+    await expect(rows.nth(index)).toBeFocused();
+    await expectVisibleBetweenBars(rows.nth(index + 1));
+  }
+});
+
+test('includes open sliders in the keyboard scroll buffer', async ({ page }) => {
+  const rows = await openReceipt(page, ['David', 'Bruno', 'Alice']);
+  await rows.nth(10).click();
+  await page.keyboard.press('%');
+  const sliders = rows.nth(10).getByRole('slider');
+  for (let index = 0; index < 3; index++) {
+    await page.keyboard.press('ArrowDown');
+    await expect(sliders.nth(index)).toBeFocused();
+    await expectVisibleBetweenBars(sliders.nth(index));
+    const next = index < 2 ? sliders.nth(index + 1) : rows.nth(11);
+    await expectVisibleBetweenBars(next);
+  }
+});
