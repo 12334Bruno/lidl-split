@@ -587,7 +587,7 @@ function handleAssignmentKey(event) {
   if (event.key === '?') {
     event.preventDefault();
     const itemName = appState.receipt.items[idx].name;
-    window.open(`https://www.google.com/search?q=${encodeURIComponent(itemName)}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://www.google.com/search?udm=2&q=${encodeURIComponent(itemName)}`, '_blank', 'noopener,noreferrer');
     return;
   }
 

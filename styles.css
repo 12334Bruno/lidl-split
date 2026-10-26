@@ -278,7 +278,20 @@ textarea:focus {
   font-size: 12px;
   font-weight: 700;
 }
-.step p {
+.usage-tips {
+  margin-top: 20px;
+}
+.usage-tips ul {
+  padding-left: 20px;
+}
+.usage-tips li {
+  margin-bottom: 6px;
+}
+.usage-tips li:last-child {
+  margin-bottom: 0;
+}
+.step p,
+.usage-tips li {
   font-size: 14px;
   color: var(--muted);
   line-height: 1.5;

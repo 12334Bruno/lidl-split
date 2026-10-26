@@ -179,7 +179,7 @@ test('changes the focused group slider without changing other shares', async ({ 
 
 
 for (const fromSlider of [false, true]) {
-  test(`searches the focused item's name in a new tab from its ${fromSlider ? 'slider' : 'row'}`, async ({ page, context }) => {
+  test(`searches Google Images for the focused item's name in a new tab from its ${fromSlider ? 'slider' : 'row'}`, async ({ page, context }) => {
     await context.route('https://www.google.com/search?*', route => route.fulfill({
       contentType: 'text/html', body: '<title>Search</title>',
     }));
@@ -193,7 +193,7 @@ for (const fromSlider of [false, true]) {
     const popupOpened = page.waitForEvent('popup');
     await page.keyboard.press('?');
     const popup = await popupOpened;
-    await expect(popup).toHaveURL('https://www.google.com/search?q=Winterpeen');
+    await expect(popup).toHaveURL('https://www.google.com/search?udm=2&q=Winterpeen');
     expect(await popup.evaluate(() => window.opener)).toBeNull();
     await popup.close();
     await expect(rows.first()).toHaveClass(/selected/);
@@ -211,7 +211,7 @@ test('searches the current row and encodes accents and query punctuation', async
   const popupOpened = page.waitForEvent('popup');
   await page.keyboard.press('?');
   const popup = await popupOpened;
-  await expect(popup).toHaveURL(`https://www.google.com/search?q=${encodeURIComponent('Crème & broccoli')}`);
+  await expect(popup).toHaveURL(`https://www.google.com/search?udm=2&q=${encodeURIComponent('Crème & broccoli')}`);
   await popup.close();
 });
 
