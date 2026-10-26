@@ -1,5 +1,5 @@
 import { parseLidlText } from './parser.js';
-import { enhanceSliderHaptics } from './haptics.js?v=slider-feedback-2';
+import { assignmentShortcuts } from './keyboard.js';
 import {
   round2, computeRunningTotals, computeSettlement, equalPercentages,
   isValidPercentages, normalizePercentages, previewPercentageAmounts,
@@ -318,6 +318,7 @@ function renderPersonButtons() {
   const colors = getColors();
   const few    = people.length <= 2;
   const all    = [...people, common];
+  const shortcuts = assignmentShortcuts([common, ...people]);
 
   const container = document.getElementById('person-btns');
   container.className = 'person-btns' + (few ? ' few' : '');
@@ -327,6 +328,13 @@ function renderPersonButtons() {
     number: few ? null : (i === people.length ? '★' : i + 1),
     callback: () => assignSelected(name),
   })));
+  container.querySelectorAll('button').forEach((button, index) => {
+    const key = shortcuts.get(all[index]);
+    if (key) {
+      button.title = `${all[index]} (${key.toUpperCase()})`;
+      button.setAttribute('aria-keyshortcuts', key);
+    }
+  });
 }
 
 function renderItemsList() {
@@ -361,7 +369,7 @@ function renderItemsList() {
 
     html += `
       <div class="item-card ${assigned ? 'assigned' : ''} ${isSelected ? 'selected' : ''}" data-item-index="${i}"
-           style="--person-color:${color}"
+           style="--person-color:${color}" tabindex="-1"
            onclick="selectItem(${i})">
         <div class="item-main">
           <div class="item-info">
@@ -514,12 +522,11 @@ function updateItemPercentage(idx, personIdx, input) {
 }
 
 function selectItem(idx) {
-  appState.selectedIdx = idx;
-  document.querySelectorAll('.item-card').forEach((card, i) => card.classList.toggle('selected', i === idx));
-  scrollToSelected();
+  focusAssignmentTarget(document.querySelector(`[data-item-index="${idx}"]`));
 }
 
-function assignSelected(person) {
+/** Assign the selected item; keyboard assignments advance exactly one row. */
+function assignSelected(person, advanceOneRow = false) {
   const idx = appState.selectedIdx;
   if (idx < 0 || idx >= appState.receipt.items.length) return;
 
@@ -536,17 +543,80 @@ function assignSelected(person) {
   if (next === -1) for (let i = 0; i < idx; i++) { if (!itemIsAssigned(i)) { next = i; break; } }
   if (next === -1) next = Math.min(idx + 1, total - 1);
 
-  appState.selectedIdx = next;
+  appState.selectedIdx = advanceOneRow ? Math.min(idx + 1, total - 1) : next;
   renderProgress();
   renderTotalsBar();
   renderItemsList();
-  scrollToSelected();
+  focusAssignmentTarget(document.querySelector(`[data-item-index="${appState.selectedIdx}"]`));
+}
+
+// Scroll the actual target clear of the sticky header and fixed assignment buttons.
+function keepAssignmentTargetVisible(target) {
+  const box = target.getBoundingClientRect();
+  const top = document.querySelector('header').getBoundingClientRect().bottom + 8;
+  const bottom = document.querySelector('#screen-assign .fab-bar').getBoundingClientRect().top - 8;
+  if (box.top < top) window.scrollBy(0, box.top - top);
+  else if (box.bottom > bottom) window.scrollBy(0, Math.min(box.bottom - bottom, box.top - top));
 }
 
 function scrollToSelected() {
-  const cards = document.querySelectorAll('.item-card');
-  const card  = cards[appState.selectedIdx];
-  if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const card = document.querySelector(`[data-item-index="${appState.selectedIdx}"]`);
+  if (card) keepAssignmentTargetVisible(card.querySelector('.item-main'));
+}
+
+function focusAssignmentTarget(target) {
+  const card = target.closest('.item-card');
+  appState.selectedIdx = Number(card.dataset.itemIndex);
+  document.querySelectorAll('.item-card').forEach(item => item.classList.toggle('selected', item === card));
+  target.focus({ preventScroll: true });
+  keepAssignmentTargetVisible(target === card ? card.querySelector('.item-main') : target);
+}
+
+/** Navigate rows and their open sliders without intercepting typing or browser shortcuts. */
+function handleAssignmentKey(event) {
+  if (appState.screen !== 'assign' || document.getElementById('settings-modal').classList.contains('open')) return;
+  if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+  const target = event.target;
+  if (target.closest('textarea, select, [contenteditable]:not([contenteditable="false"])') ||
+      (target.matches('input') && target.type !== 'range')) return;
+
+  const card = target.closest('.item-card') ?? document.querySelector(`[data-item-index="${appState.selectedIdx}"]`);
+  if (!card) return;
+  const idx = Number(card.dataset.itemIndex);
+
+  if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    event.preventDefault();
+    const queue = [...document.querySelectorAll('.item-card, .split-controls:not([hidden]) .percentage-slider')];
+    const current = queue.indexOf(target.matches('.percentage-slider') ? target : card);
+    const direction = event.key === 'ArrowDown' ? 1 : -1;
+    focusAssignmentTarget(queue[Math.max(0, Math.min(queue.length - 1, current + direction))]);
+    return;
+  }
+
+  if (event.key === '%') {
+    event.preventDefault();
+    toggleItemSplit(idx, !appState.splits[idx].enabled);
+    focusAssignmentTarget(document.querySelector(`[data-item-index="${idx}"]`));
+    return;
+  }
+
+  if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && appState.splits[idx].enabled) {
+    event.preventDefault();
+    const slider = target.matches('.percentage-slider') ? target : card.querySelector('.percentage-slider');
+    const direction = event.key === 'ArrowRight' ? 1 : -1;
+    slider.value = Math.max(0, Math.min(100, slider.valueAsNumber + direction * 5));
+    updateItemPercentage(idx, Number(slider.dataset.percentageInput), slider);
+    keepAssignmentTargetVisible(target === card ? card.querySelector('.item-main') : target);
+    return;
+  }
+
+  const shortcuts = assignmentShortcuts([getCommon(), ...getPeople()]);
+  const name = [...shortcuts].find(([, key]) => key === event.key.toLowerCase())?.[0];
+  if (name) {
+    event.preventDefault();
+    appState.selectedIdx = idx;
+    assignSelected(name, true);
+  }
 }
 
 // ── Settle Screen ─────────────────────────────
@@ -637,7 +707,13 @@ document.getElementById('settings-modal').addEventListener('click', function(e) 
   if (e.target === this) closeSettings();
 });
 
-enhanceSliderHaptics(document.getElementById('items-list'));
+document.addEventListener('keydown', handleAssignmentKey);
+document.getElementById('items-list').addEventListener('focusin', event => {
+  const card = event.target.closest('.item-card');
+  if (!card) return;
+  appState.selectedIdx = Number(card.dataset.itemIndex);
+  document.querySelectorAll('.item-card').forEach(item => item.classList.toggle('selected', item === card));
+});
 
 // Leave room for all the buttons, including when more people are added.
 new ResizeObserver(entries => {

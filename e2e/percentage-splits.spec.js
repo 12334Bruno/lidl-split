@@ -60,22 +60,20 @@ test('opens a compact percentage menu and shows Normalize only inside it', async
   await expect(card.getByRole('button', { name: 'Normalize', exact: true })).toHaveCount(0);
 });
 
-test('moves the two-person slider by one percent and updates both prices', async ({ page }) => {
+test('changes two-person shares by five percent with keyboard arrows', async ({ page }) => {
   const card = await openReceipt(page, 2);
   await card.locator('.split-menu-button').click();
   const slider = card.getByRole('slider');
   await slider.focus();
-  await slider.press('Home');
   await slider.press('ArrowRight');
-  await expect(card.getByRole('spinbutton')).toHaveValue('1');
-  await expect(card.locator('[data-percentage-label]')).toHaveText(['1%', '99%']);
-  await expect(card.locator('[data-share-price]')).toHaveText(['€0.10', '€9.90']);
+  await expect(card.getByRole('spinbutton')).toHaveValue('55');
+  await expect(card.locator('[data-percentage-label]')).toHaveText(['55%', '45%']);
+  await expect(card.locator('[data-share-price]')).toHaveText(['€5.50', '€4.50']);
 
   await card.getByRole('spinbutton').fill('33.33');
-  await expect(slider).toHaveValue('33');
   await slider.press('ArrowRight');
-  await expect(card.getByRole('spinbutton')).toHaveValue('34');
-  await expect(card.locator('[data-percentage-label]')).toHaveText(['34%', '66%']);
+  await expect(card.getByRole('spinbutton')).toHaveValue('38');
+  await expect(card.locator('[data-percentage-label]')).toHaveText(['38%', '62%']);
 });
 
 test('shows live prices below and above 100% without adjusting other people', async ({ page }) => {
@@ -88,7 +86,7 @@ test('shows live prices below and above 100% without adjusting other people', as
 
   await card.getByRole('slider').first().focus();
   await card.getByRole('slider').first().press('ArrowRight');
-  await expect(card.getByRole('spinbutton').first()).toHaveValue('11');
+  await expect(card.getByRole('spinbutton').first()).toHaveValue('15');
   await expect(card.getByRole('spinbutton').nth(1)).toHaveValue('20');
   await card.getByRole('spinbutton').first().fill('100');
   await expect(card.locator('[data-share-price]')).toHaveText(['€10.00', '€2.00', '€3.00']);
