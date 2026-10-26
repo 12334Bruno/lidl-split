@@ -1050,10 +1050,9 @@ input[type="text"]:focus {
   justify-content: space-between;
   padding: 6px 0;
   font-size: 14px;
-  border-bottom: 1px solid var(--bg);
 }
-.settle-item-row:last-child {
-  border-bottom: none;
+.settle-item-row:has(+ .settle-item-row) {
+  border-bottom: 1px solid var(--bg);
 }
 .settle-item-price {
   font-family: 'JetBrains Mono', monospace;
